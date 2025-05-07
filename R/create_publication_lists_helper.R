@@ -6,7 +6,7 @@
 #' @importFrom checkmate test_list test_subset
 #' @importFrom dplyr bind_rows recode
 #' @importFrom purrr map discard map_chr pluck safely
-#' @importFrom rlang is_list %||%
+#' @importFrom rlang .data is_list %||%
 #' @importFrom stringr str_extract str_detect str_remove str_c
 #' @importFrom tibble tibble enframe
 #'
@@ -228,7 +228,7 @@
   # --- 2. Filter Invalid/Incomplete Entries ---
   # Filter entries where join failed or essential data is missing
   combined_data <- combined_data %>%
-    dplyr::filter(!is.na(bibtype) & !is.na(formatted_string) & nzchar(formatted_string))
+    dplyr::filter(!is.na(.data$bibtype) & !is.na(.data$formatted_string) & nzchar(.data$formatted_string))
   # Note: We keep entries with year = 0L (originally NA) based on previous decision
 
   # Guard Clause: Check if any data remains after join/filter
@@ -248,7 +248,7 @@
   combined_data <- combined_data %>%
     dplyr::mutate(
       # Use !!! to splice the named list/vector group_labels into recode
-      label = dplyr::recode(bibtype, !!!group_labels, .default = default_label)
+      label = dplyr::recode(.data$bibtype, !!!group_labels, .default = default_label)
     )
 
   # --- 4. Highlight Author ---
@@ -258,7 +258,7 @@
     dplyr::mutate(
       # Apply replacement only to non-NA formatted strings (already filtered NAs)
       formatted_string = stringr::str_replace_all(
-        formatted_string,
+        .data$formatted_string,
         pattern = stringr::fixed(author_name),
         replacement = replacement_string
       )
@@ -308,7 +308,7 @@
 
     # Convert 'label' column to factor with the calculated levels
     data_to_sort <- data_to_sort %>%
-      dplyr::mutate(label = factor(label, levels = final_levels))
+      dplyr::mutate(label = factor(.data$label, levels = final_levels))
 
     cli::cli_inform("Sorting groups by custom order: {paste(final_levels, collapse=', ')}")
   }
@@ -319,13 +319,13 @@
   # year = 0L for NA values will typically sort them first when descending,
   # which might be desired (e.g., "in press" before older years).
   combined_data_sorted <- data_to_sort %>%
-    dplyr::arrange(label, dplyr::desc(year))
+    dplyr::arrange(.data$label, dplyr::desc(.data$year))
 
   # --- Convert label back to character ---
   # Important for consistent output type, regardless of whether factor was used
   if (is.factor(combined_data_sorted$label)) {
     combined_data_sorted <- combined_data_sorted %>%
-      dplyr::mutate(label = as.character(label))
+      dplyr::mutate(label = as.character(.data$label))
   }
 
   return(combined_data_sorted)

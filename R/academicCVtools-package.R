@@ -10,13 +10,13 @@
 #' Key functionalities include:
 #' \itemize{
 #'   \item Reading specific sheets from Google Sheets documents, identified by ID, URL, or name
-#'     (\code{\link{read_cv_sheet}}, \code{\link{load_cv_sheets}}).
+#'     ([read_cv_sheet()], [load_cv_sheets()]).
 #'   \item Processing BibTeX files to generate formatted publication lists, with
 #'     options for author highlighting, custom grouping, and sorting
-#'     (\code{\link{create_publication_list}}).
+#'     ([create_publication_list()]).
 #'   \item Transforming R data frames (tibbles) into Typst array-of-dictionary
 #'     structures, suitable for Typst function arguments, with flexible column
-#'     combination and exclusion (\code{\link{format_typst_section}}).
+#'     combination and exclusion ([format_typst_section()]).
 #' }
 #'
 #' The package aims to simplify the maintenance of CV content by separating it

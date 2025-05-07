@@ -15,31 +15,31 @@ read_cv_sheet(
 \arguments{
 \item{doc_identifier}{The ID, URL, or name of the Google Sheets document.
 Must be a single, non-empty string. If a name is provided,
-`googledrive::drive_find()` is used to find the unique document,
-and the result (a `dribble`) is passed to `googlesheets4`.
+\code{googledrive::drive_find()} is used to find the unique document,
+and the result (a \code{dribble}) is passed to \code{googlesheets4}.
 Using ID or URL is generally more robust.}
 
 \item{sheet_name}{The name of the specific sheet (tab) within the Google
 Sheet document to read (e.g., "Working Experiences", "Publications").
 Must be a single, non-empty string.}
 
-\item{na_strings}{A character vector of strings to interpret as `NA` values.
-Defaults to `c("", "NA", "N/A")`. Passed to `googlesheets4::read_sheet`.
-Must be a character vector (can be empty `character(0)`), cannot be `NULL`.}
+\item{na_strings}{A character vector of strings to interpret as \code{NA} values.
+Defaults to \code{c("", "NA", "N/A")}. Passed to \code{googlesheets4::read_sheet}.
+Must be a character vector (can be empty \code{character(0)}), cannot be \code{NULL}.}
 
-\item{col_types}{Column specification passed to `googlesheets4::read_sheet`.
-Defaults to `NULL`. Can be `NULL` or an atomic vector (e.g., a string like "c", "cc?i").
-Validation relies primarily on `googlesheets4`.}
+\item{col_types}{Column specification passed to \code{googlesheets4::read_sheet}.
+Defaults to \code{NULL}. Can be \code{NULL} or an atomic vector (e.g., a string like "c", "cc?i").
+Validation relies primarily on \code{googlesheets4}.}
 
 \item{trim_ws}{Logical scalar (TRUE or FALSE), should leading/trailing whitespace
-be removed from character vectors? Defaults to `TRUE`. Passed to
-`googlesheets4::read_sheet`. Must not be `NA`.}
+be removed from character vectors? Defaults to \code{TRUE}. Passed to
+\code{googlesheets4::read_sheet}. Must not be \code{NA}.}
 }
 \value{
-A `tibble` (data frame) containing the data from the specified sheet.
-        Returns an empty tibble with a warning if the sheet is empty.
-        Throws an error if arguments are invalid, the document/sheet cannot be
-        accessed/read, or if a provided name is ambiguous.
+A \code{tibble} (data frame) containing the data from the specified sheet.
+Returns an empty tibble with a warning if the sheet is empty.
+Throws an error if arguments are invalid, the document/sheet cannot be
+accessed/read, or if a provided name is ambiguous.
 }
 \description{
 This function reads data from a specified sheet (tab) within a Google Sheet

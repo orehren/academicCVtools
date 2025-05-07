@@ -28,12 +28,16 @@ Imports:
     rlang,
     stringr,
     tidyr,
+    tibble,
+    jsonlite,
+    magrittr,
+    tidyselect,
+    janitor,
     checkmate
 Suggests:
     knitr, 
     rmarkdown, 
     testthat (>= 3.0.0),
-    janitor,
     mockery
 Depends: 
     R (>= 4.0) 
@@ -41,3 +45,4 @@ URL: https://github.com/orehren/academicCVtools
 BugReports: https://github.com/orehren/academicCVtools/issues
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)

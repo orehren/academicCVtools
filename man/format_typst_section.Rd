@@ -17,51 +17,51 @@ format_typst_section(
 }
 \arguments{
 \item{data}{A data frame or tibble where each row is a CV entry and columns
-are fields. Typically the output of `read_cv_sheet` or an element
-from the list returned by `load_cv_sheets`. Must not be `NULL`.}
+are fields. Typically the output of \code{read_cv_sheet} or an element
+from the list returned by \code{load_cv_sheets}. Must not be \code{NULL}.}
 
 \item{typst_func}{The name of the Typst function to call for each entry
-(row). Must be a single string starting with `#`, e.g., `"#cvEntry"`.}
+(row). Must be a single string starting with \verb{#}, e.g., \code{"#cvEntry"}.}
 
 \item{combine_cols}{Optional: A vector of column names or a tidyselect
-expression (e.g., `c(detail_1, detail_2)` or `starts_with("detail")`)
-specifying columns to combine into a single field. Defaults to `NULL`
+expression (e.g., \code{c(detail_1, detail_2)} or \code{starts_with("detail")})
+specifying columns to combine into a single field. Defaults to \code{NULL}
 (no combination).}
 
 \item{combine_as}{Character string: The name of the new field in the Typst
-dictionary that will contain the combined values. Defaults to `"details"`.
+dictionary that will contain the combined values. Defaults to \code{"details"}.
 Must be a single, non-empty string.}
 
 \item{combine_sep}{Character string: The separator used when joining the
-values from `combine_cols`. Defaults to `"\\n"` (newline). Can be empty.}
+values from \code{combine_cols}. Defaults to \code{"\\\\n"} (newline). Can be empty.}
 
 \item{combine_prefix}{Character string: A prefix added to each non-NA value
-before joining. Defaults to `"- "`. Can be empty.}
+before joining. Defaults to \code{"- "}. Can be empty.}
 
 \item{exclude_cols}{Optional: A vector of column names or a tidyselect
 expression specifying columns to exclude from the Typst output.
-Defaults to `NULL` (no exclusion). Columns listed in `combine_cols`
+Defaults to \code{NULL} (no exclusion). Columns listed in \code{combine_cols}
 are automatically excluded from the main output dictionary.}
 
-\item{na_action}{Character string: How to handle `NA` values in columns *not*
-involved in `combine_cols`. Must be one of `"omit"`, `"keep"`, or `"string"`.
-- `"omit"` (default): Key-value pairs with `NA` values are omitted.
-- `"keep"`: `NA` values are converted to Typst's `none` literal.
-- `"string"`: `NA` values are converted to the string `"NA"`.}
+\item{na_action}{Character string: How to handle \code{NA} values in columns \emph{not}
+involved in \code{combine_cols}. Must be one of \code{"omit"}, \code{"keep"}, or \code{"string"}.
+- \code{"omit"} (default): Key-value pairs with \code{NA} values are omitted.
+- \code{"keep"}: \code{NA} values are converted to Typst's \code{none} literal.
+- \code{"string"}: \code{NA} values are converted to the string \code{"NA"}.}
 }
 \value{
 A single character string containing Typst code. This string consists
-        of multiple Typst function calls (one per row of `data`), wrapped
-        in a ```{typst} ... ``` block. Returns an empty Typst block
-        `"```{typst}\n```"` if the input data frame has zero rows after
-        validation. Throws an error if arguments are invalid.
+of multiple Typst function calls (one per row of \code{data}), wrapped
+in a \verb{\{typst\} ... } block. Returns an empty Typst block
+\code{"```{typst}\\n```"} if the input data frame has zero rows after
+validation. Throws an error if arguments are invalid.
 }
 \description{
 Takes a data frame (tibble) representing a CV section and formats it into
 a single string suitable for Typst. Each row of the data frame is converted
 into a Typst function call. Columns can be combined or excluded using
 tidyselect syntax. Argument validation is performed using assertions from
-the `checkmate` package via an internal helper function.
+the \code{checkmate} package via an internal helper function.
 }
 \examples{
 \dontrun{

@@ -33,7 +33,7 @@
 #'        Pandoc is expected to be in the system's PATH. If provided, must be a
 #'        single, non-empty string (existence is checked later).
 #' @param author_highlight_markup Typst markup string used for highlighting the
-#'        `author_name`. Must contain the placeholder `%s` exactly once, which
+#'        `author_name`. Must contain the placeholder \%s exactly once, which
 #'        will be replaced by the `author_name`. Must be a single, non-empty string.
 #'        Defaults to `"#strong[%s]"`.
 #' @param typst_func_name Name of the Typst function that will receive the
@@ -42,7 +42,7 @@
 #'        Must be a single, non-empty string (without the leading '#').
 #'        Defaults to `"publication-list"`.
 #'
-#' @return A single character string containing a Typst code block (````{=typst} ... ````)
+#' @returns A single character string containing a Typst code block (` ```{=typst} ... ``` `)
 #'         with the formatted publication list, ready to be included in a Quarto
 #'         document via `output: asis`. Returns an empty Typst array block if
 #'         no processable entries are found after validation and processing.
@@ -65,10 +65,29 @@
 #' # --- Setup ---
 #' # Create dummy bib file
 #' bib_content <- c(
-#'   "@article{Author2023Title, author={First Author and Second Author}, title={A Title}, year={2023}, journal={Some Journal}}",
-#'   "@inproceedings{Author2022Conf, author={Second Author}, title={Conf Paper}, year={2022}, booktitle={Proc. Conf}}",
-#'   "@misc{AuthorNodatePrep, author={First Author}, title={In Prep}, howpublished={In Review}}",
-#'   "@book{Third2021Book, author={Third Person}, title={A Book}, year={2021}, publisher={Pub Co}}"
+#'   "@article{Author2023Title,
+#'             author={First Author and Second Author},
+#'             title={A Title},
+#'             year={2023},
+#'             journal={Some Journal}
+#'             }",
+#'   "@inproceedings{Author2022Conf,
+#'                   author={Second Author},
+#'                   title={Conf Paper},
+#'                   year={2022},
+#'                   booktitle={Proc. Conf}
+#'                   }",
+#'   "@misc{AuthorNodatePrep,
+#'          author={First Author},
+#'          title={In Prep},
+#'          howpublished={In Review}
+#'          }",
+#'   "@book{Third2021Book,
+#'          author={Third Person},
+#'          title={A Book},
+#'          year={2021},
+#'          publisher={Pub Co}
+#'          }"
 #' )
 #' bib_file <- tempfile(fileext = ".bib")
 #' writeLines(bib_content, bib_file)

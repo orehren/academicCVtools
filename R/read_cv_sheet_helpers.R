@@ -181,7 +181,15 @@
   # Guard Clause 3: Sheet name not found
   sheet_names_in_doc <- sheets_info$name
   if (!sheet_name %in% sheet_names_in_doc) {
-    available_sheets_msg <- .create_available_sheets_message(sheet_names_in_doc) # Assumes helper exists
+    #available_sheets_msg <- .create_available_sheets_message(sheet_names_in_doc) # Assumes helper exists
+    max_sheets_to_show <- 10
+    available_sheets_msg <- if (length(sheet_names_in_doc) > max_sheets_to_show) {
+      paste(paste(utils::head(sheet_names_in_doc, max_sheets_to_show), collapse = ", "), "...")
+    } else {
+      paste(sheet_names_in_doc, collapse = ", ")
+    }
+    # Fallback falls Liste leer war
+    if (nchar(available_sheets_msg) == 0) available_sheets_msg <- "(No sheets found or list empty)"
     cli::cli_abort(
       c("Sheet named {.val {sheet_name}} not found in document (ID: {.val {doc_id_for_msg}}).",
         "i" = "Available sheets: {.val {available_sheets_msg}}."
@@ -259,5 +267,3 @@
   }
   return(sheet_data)
 }
-
-# Assume .create_available_sheets_message exists (e.g., in utils.R)

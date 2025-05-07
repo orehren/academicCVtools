@@ -6,7 +6,7 @@
 \alias{academicCVtools}
 \title{academicCVtools: Tools to Generate CV Sections from Data for Typst/Quarto}
 \description{
-The `academicCVtools` package provides a suite of functions to facilitate
+The \code{academicCVtools} package provides a suite of functions to facilitate
 the creation of academic Curricula Vitae (CVs) using a data-driven workflow.
 It primarily focuses on reading structured data from sources like Google Sheets
 and BibTeX files, processing this data, and then formatting it into Typst
@@ -16,14 +16,14 @@ documents that utilize a Typst template for rendering the final CV PDF.
 \details{
 Key functionalities include:
 \itemize{
-  \item Reading specific sheets from Google Sheets documents, identified by ID, URL, or name
-    (\code{\link{read_cv_sheet}}, \code{\link{load_cv_sheets}}).
-  \item Processing BibTeX files to generate formatted publication lists, with
-    options for author highlighting, custom grouping, and sorting
-    (\code{\link{create_publication_list}}).
-  \item Transforming R data frames (tibbles) into Typst array-of-dictionary
-    structures, suitable for Typst function arguments, with flexible column
-    combination and exclusion (\code{\link{format_typst_section}}).
+\item Reading specific sheets from Google Sheets documents, identified by ID, URL, or name
+(\code{\link[=read_cv_sheet]{read_cv_sheet()}}, \code{\link[=load_cv_sheets]{load_cv_sheets()}}).
+\item Processing BibTeX files to generate formatted publication lists, with
+options for author highlighting, custom grouping, and sorting
+(\code{\link[=create_publication_list]{create_publication_list()}}).
+\item Transforming R data frames (tibbles) into Typst array-of-dictionary
+structures, suitable for Typst function arguments, with flexible column
+combination and exclusion (\code{\link[=format_typst_section]{format_typst_section()}}).
 }
 
 The package aims to simplify the maintenance of CV content by separating it
@@ -33,8 +33,8 @@ formatting through Typst templates in a Quarto environment.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/yourusername/academicCVtools}
-  \item Report bugs at \url{https://github.com/yourusername/academicCVtools/issues}
+  \item \url{https://github.com/orehren/academicCVtools}
+  \item Report bugs at \url{https://github.com/orehren/academicCVtools/issues}
 }
 
 }

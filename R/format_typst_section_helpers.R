@@ -21,6 +21,8 @@
 #' @importFrom cli cli_warn
 #'
 #' @noRd
+none <- NULL
+
 .combine_columns_data <- function(data_proc, combine_col_names, combine_as, combine_sep, combine_prefix) {
   # Guard clause: If no columns to combine, return data as is
   if (length(combine_col_names) == 0) {
