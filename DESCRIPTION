@@ -37,7 +37,7 @@ Suggests:
     mockery
 Depends: 
     R (>= 4.0) 
-URL: https://github.com/yourusername/academicCVtools 
-BugReports: https://github.com/yourusername/academicCVtools/issues 
+URL: https://github.com/yourusername/academicCVtools, https://github.com/orehren/academicCVtools
+BugReports: https://github.com/orehren/academicCVtools/issues
 Config/testthat/edition: 3
 VignetteBuilder: knitr
