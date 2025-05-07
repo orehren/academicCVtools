@@ -1,0 +1,7 @@
+The R code in this package is licensed under the GPL-3 (see LICENSE file).
+
+The Typst template files located in 'inst/templates/' (or similar path)
+are licensed under the Creative Commons Attribution-NonCommercial-ShareAlike
+4.0 International License (CC BY-NC-SA 4.0).
+You can find the full license text here:
+https://creativecommons.org/licenses/by-nc-sa/4.0/

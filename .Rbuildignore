@@ -1,0 +1,7 @@
+^renv$
+^renv\.lock$
+^.*\.Rproj$
+^\.Rproj\.user$
+^backup$
+^doc$
+^Meta$

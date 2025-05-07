@@ -1,0 +1,43 @@
+Package: academicCVtools
+Type: Package
+Title: Tools to Generate Academic CV Sections from Google Sheets for Typst/Quarto
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Oliver",
+           family = "Rehren",
+           role = c("aut", "cre"), 
+           email = "o.rehren@gmail.com",
+           comment = c(ORCID = "0000-0001-7602-8219")) 
+Description: Provides functions to read structured data for academic CVs 
+    (like publications, work experience, education) from individual sheets 
+    within a Google Sheets document. Handles potentially variable sheet and 
+    column names. Includes tools to transform this data into Typst function 
+    calls, suitable for integration into Quarto documents using a Typst template 
+    workflow. Facilitates the creation of automated, data-driven academic CVs.
+License: GPL-3 | file LICENSE 
+Encoding: UTF-8
+LazyData: true
+ByteCompile: true
+RoxygenNote: 7.3.2
+Imports: 
+    cli,
+    dplyr,
+    googledrive,
+    googlesheets4 (>= 1.1.0),
+    purrr,
+    rlang,
+    stringr,
+    tidyr,
+    checkmate
+Suggests:
+    knitr, 
+    rmarkdown, 
+    testthat (>= 3.0.0),
+    janitor,
+    mockery
+Depends: 
+    R (>= 4.0) 
+URL: https://github.com/yourusername/academicCVtools 
+BugReports: https://github.com/yourusername/academicCVtools/issues 
+Config/testthat/edition: 3
+VignetteBuilder: knitr

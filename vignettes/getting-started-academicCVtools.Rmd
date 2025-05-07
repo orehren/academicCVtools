@@ -1,0 +1,438 @@
+---
+title: "Getting Started with academicCVtools"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with academicCVtools}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup_vignette, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(academicCVtools)
+library(dplyr) 
+library(mockery) 
+
+# --- Mocking for load_cv_sheets ---
+# Define the data to be returned by the mocked function
+work_experience_data_vig <- dplyr::tibble(
+  Period = c("2020 - Present"), 
+  Role = c("Lead Researcher"),
+  Institution = "Vignette Lab", 
+  Location = "RStudio", 
+  Details = "Writing Vignettes"
+)
+education_data_vig <- dplyr::tibble(
+  Degree = c("PhD in R"), 
+  Institution = c("CRAN University"), 
+  Year = "2024"
+)
+cv_data_list_for_mock <- list(
+  work_exp = work_experience_data_vig,
+  education_hist = education_data_vig
+)
+
+# Mock the validator to always return TRUE for vignette purposes
+mockery::stub(load_cv_sheets, ".validate_load_cv_sheets_args", TRUE)
+
+# Mock .prepare_sheet_load_config to provide the expected sheet_names and target_names
+dummy_sheets_config_vig <- list("Work Experience" = "work_exp", "Education" = "education_hist")
+mockery::stub(load_cv_sheets, ".prepare_sheet_load_config", 
+              list(sheet_names_to_read = names(dummy_sheets_config_vig), 
+                   target_list_names = as.character(unlist(dummy_sheets_config_vig))))
+
+# Mock .load_sheets_data to return the correct parts of cv_data_list_for_mock
+mockery::stub(load_cv_sheets, ".load_sheets_data", 
+    function(sheet_names_to_read, doc_identifier, ...) {
+        # sheet_names_to_read will be c("Work Experience", "Education")
+        # We need to return an unnamed list of tibbles based on these names
+        res_list <- list()
+        # This logic needs to be robust if sheet_names_to_read order changes
+        # or if only a subset is requested (though .prepare_sheet_load_config mock fixes this)
+        if ("Work Experience" %in% sheet_names_to_read) {
+            res_list <- c(res_list, list(cv_data_list_for_mock$work_exp))
+        }
+        if ("Education" %in% sheet_names_to_read) {
+            res_list <- c(res_list, list(cv_data_list_for_mock$education_hist))
+        }
+        # Ensure the order matches sheet_names_to_read if it matters
+        # For this specific mock, assuming the order from dummy_sheets_config_vig
+        # will match the order they appear in res_list.
+        return(res_list) 
+    }
+)
+# --- End Mocking for load_cv_sheets ---
+
+
+# --- Mocking for create_publication_list ---
+bib_content_vignette <- c(
+  "@article{Vignette2023, author={V. Ignette and U. Ser}, title={A Vignette Title}, year={2023}, journal={Journal of Examples}}",
+  "@inproceedings{Vignette2022, author={U. Ser}, title={Conference Example}, year={2022}, booktitle={Proc. of Examples}}"
+)
+temp_bib_file <- tempfile(fileext = ".bib")
+temp_csl_file <- tempfile(fileext = ".csl")
+writeLines(bib_content_vignette, temp_bib_file)
+# Minimal CSL
+csl_content_vignette <- '<?xml version="1.0"?><style xmlns="http://purl.org/net/xbiblio/csl" version="1.0"><info><title>mini</title><id>m</id><updated>2023-01-01</updated></info><bibliography><layout><text variable="author" suffix=". "/>(<text variable="issued" suffix="). " /><text variable="title"/>.</layout></bibliography></style>'
+writeLines(csl_content_vignette, temp_csl_file)
+
+# Ensure this JSON is 100% correct and valid
+mocked_pandoc_json_output <- '{
+  "pandoc-api-version": [1,23,1],
+  "meta": {
+    "csl":{"t":"MetaString","c":"assets/apa.csl"},
+    "nocite":{"t":"MetaInlines","c":[{"t":"Cite","c":[[{"citationId":"*","citationPrefix":[],"citationSuffix":[],"citationMode":{"t":"NormalCitation"},"citationNoteNum":0,"citationHash":0}],[{"t":"Str","c":"[@*]"}]]}]},
+    "references": { "t": "MetaList", "c": [
+      {"t": "MetaMap", "c": {"id": {"t": "MetaString", "c": "Vignette2023"}, "type": {"t": "MetaString", "c": "article-journal"}, "issued": {"t": "MetaString", "c": "2023"}, "author": {"t": "MetaList", "c": [{"t":"MetaMap", "c":{"family":{"t":"MetaString", "c":"Ignette"}, "given":{"t":"MetaString", "c":"V."}}}, {"t":"MetaMap", "c":{"family":{"t":"MetaString", "c":"Ser"}, "given":{"t":"MetaString", "c":"U."}}}] } } },
+      {"t": "MetaMap", "c": {"id": {"t": "MetaString", "c": "Vignette2022"}, "type": {"t": "MetaString", "c": "paper-conference"}, "issued": {"t": "MetaString", "c": "2022"}, "author": {"t": "MetaList", "c": [{"t":"MetaMap", "c":{"family":{"t":"MetaString", "c":"Ser"}, "given":{"t":"MetaString", "c":"U."}}}]} } } 
+    ]}
+  },
+  "blocks": [{ "t": "Div", "c": [ ["refs",["references","csl-bib-body"],[]], [
+    {"t":"Div", "c": [["ref-Vignette2023",["csl-entry"],[]], [{"t":"Para","c":[{"t":"Str","c":"Ignette, V., & Ser, U. "},{"t":"Str","c":"(2023). "},{"t":"Str","c":"A Vignette Title."}]}]]},
+    {"t":"Div", "c": [["ref-Vignette2022",["csl-entry"],[]], [{"t":"Para","c":[{"t":"Str","c":"Ser, U. "},{"t":"Str","c":"(2022). "},{"t":"Str","c":"Conference Example."}]}]]}
+  ]]}]
+}'
+
+# Mock internal helpers of create_publication_list
+mockery::stub(create_publication_list, ".validate_create_publication_list_args", TRUE)
+mockery::stub(create_publication_list, ".validate_executable_found", "/mock/pandoc") 
+mockery::stub(create_publication_list, ".call_pandoc_json", mocked_pandoc_json_output)
+# --- End Mocking for create_publication_list ---
+
+
+# --- Now call the functions to populate variables for the vignette ---
+dummy_doc_id <- "mocked_doc_id_for_vignette" 
+cv_data <- load_cv_sheets(
+  doc_identifier = dummy_doc_id,
+  sheets_to_load = dummy_sheets_config_vig 
+)
+
+publication_typst_string <- create_publication_list(
+  bib_file = temp_bib_file,
+  author_name = "U. Ser", 
+  csl_file = temp_csl_file,
+  author_highlight_markup = "#underline[%s]"
+)
+
+# Clean up temporary files at the end of the chunk's evaluation
+on.exit({
+  if (file.exists(temp_bib_file)) unlink(temp_bib_file)
+  if (file.exists(temp_csl_file)) unlink(temp_csl_file)
+}, add = TRUE)
+
+```
+
+## Introduction
+
+The `academicCVtools` package simplifies creating academic Curricula Vitae (CVs) by integrating data from sources like Google Sheets and BibTeX files into a Quarto/Typst workflow. It transforms your data into Typst function calls, allowing for automated and maintainable CV generation.
+
+This vignette will guide you through:
+
+1.  Setting up example data.
+2.  Loading data from a (mocked) Google Sheet.
+3.  Generating a publication list from a (mocked) BibTeX file.
+4.  Formatting these data sections into Typst code.
+5.  Illustrating how to integrate this into a Quarto document.
+
+## Prerequisites
+
+-   R and RStudio
+-   Quarto installation
+-   Pandoc (usually bundled with RStudio/Quarto)
+-   Familiarity with R. Basic understanding of Quarto and Typst is helpful.
+
+## Installation
+
+```{r installation, eval=FALSE}
+# Install from GitHub (replace with actual path once available):
+remotes::install_github("yourusername/academicCVtools")
+
+# Or using renv:
+renv::install("yourusername/academicCVtools")
+
+# Once on CRAN:
+install.packages("academicCVtools")
+```
+
+Load the package:
+
+```{r load_package}
+library(academicCVtools)
+```
+
+## Authentication with Google Services (Conceptual)
+
+For real-world use with Google Sheets, you'd need to authenticate. The `academicCVtools` package relies on `googlesheets4` for this.
+
+```{r auth_conceptual, eval=FALSE}
+# In a real session, you would run:
+googlesheets4::gs4_auth() 
+#or set up non-interactive auth for automated workflows.
+```
+
+For this vignette, we will mock the Google Sheets interaction, so direct authentication is not required to build the vignette.
+
+## Workflow Overview
+
+1.  **Prepare Data**: Structure your CV sections in Google Sheets and your publications in a BibTeX file.
+2.  **Load Data**: Use `load_cv_sheets()` and `create_publication_list()` to bring data into R.
+3.  **Format for Typst**: Use `format_typst_section()` to convert R data frames into Typst code.
+4.  **Integrate**: Embed the generated Typst code into your Quarto (`.qmd`) document.
+
+## Step 1 & 2: Preparing and Loading Example Data
+
+For this vignette, we'll create dummy data directly in R and mock the loading process.
+
+### A. CV Sections (Simulating Google Sheets)
+
+Let's define some example data for "Work Experience" and "Education" sections.
+
+```{r example_data_setup}
+work_experience_data <- dplyr::tibble(
+  Period = c("2020 - Present", "2018 - 2020"),
+  Role = c("Lead Researcher", "Postdoctoral Fellow"),
+  Institution = c("Future Tech Labs", "University of Science"),
+  Location = c("Virtual", "Metropolis"),
+  Details = c("Led a team of 5 on project X.", "Published 3 papers on topic Y.")
+)
+
+education_data <- dplyr::tibble(
+  Degree = c("PhD in Computational Magic", "MSc in Theoretical Potions"),
+  Institution = c("Unseen University", "Wizarding Academy"),
+  Year = c("2018", "2016"),
+  Notes = c("Thesis on 'The Dynamics of Thaums'", "Dissertation on 'Advanced Hexes'")
+)
+
+# This is what load_cv_sheets would typically produce:
+cv_data_list_mocked <- list(
+  work_exp = work_experience_data,
+  education_hist = education_data
+)
+
+# Mocking load_cv_sheets to return our predefined list
+# This avoids actual Google API calls for the vignette
+mock_load_cv_sheets <- mockery::mock(cv_data_list_mocked)
+mockery::stub(academicCVtools::load_cv_sheets, ".validate_load_cv_sheets_args", TRUE) # Assume valid args for mock
+mockery::stub(academicCVtools::load_cv_sheets, ".prepare_sheet_load_config", 
+              list(sheet_names_to_read = names(cv_data_list_mocked), 
+                   target_list_names = names(cv_data_list_mocked))) # Simulate config
+mockery::stub(academicCVtools::load_cv_sheets, ".load_sheets_data", # Mock the internal data loader
+              function(sheet_names_to_read, doc_identifier, ...) {
+                # Return parts of cv_data_list_mocked based on sheet_names_to_read
+                # For simplicity, we assume the mock always returns the full list,
+                # and load_cv_sheets handles naming it correctly.
+                # Or, more precisely:
+                if(identical(sheet_names_to_read, names(cv_data_list_mocked))) {
+                    return(unname(cv_data_list_mocked)) # Return unnamed list of tibbles
+                } else { # Fallback for other calls if any
+                    return(list(dplyr::tibble())) 
+                }
+              })
+
+# Now, calling load_cv_sheets will use the mocked behavior
+# We define dummy identifiers, as they won't be used by the mock.
+dummy_doc_id <- "mocked_doc_id"
+dummy_sheets_config <- list("Work Experience" = "work_exp", "Education" = "education_hist")
+
+cv_data <- academicCVtools::load_cv_sheets(
+  doc_identifier = dummy_doc_id,
+  sheets_to_load = dummy_sheets_config 
+)
+
+# Verify loaded data (optional print)
+# print(cv_data$work_exp)
+# print(cv_data$education_hist)
+```
+
+### B. Publication Data (Simulating BibTeX and Pandoc)
+
+We'll define minimal BibTeX and CSL content and mock the Pandoc JSON generation.
+
+```{r example_pubs_setup}
+bib_content_vignette <- c(
+  "@article{Vignette2023, author={V. Ignette and U. Ser}, title={A Vignette Title}, year={2023}, journal={Journal of Examples}}",
+  "@inproceedings{Vignette2022, author={U. Ser}, title={Conference Example}, year={2022}, booktitle={Proc. of Examples}}"
+)
+csl_content_vignette <- '<?xml version="1.0"?><style xmlns="http://purl.org/net/xbiblio/csl" version="1.0"><info><title>mini</title><id>m</id><updated>2023-01-01</updated></info><bibliography><layout><text variable="author" suffix=". "/>(<text variable="issued" suffix="). " /><text variable="title"/>.</layout></bibliography></style>'
+
+temp_bib_file <- tempfile(fileext = ".bib")
+temp_csl_file <- tempfile(fileext = ".csl")
+writeLines(bib_content_vignette, temp_bib_file)
+writeLines(csl_content_vignette, temp_csl_file)
+
+# Mocked JSON output that .call_pandoc_json should return
+# This needs to be accurate for the bib_content_vignette and csl_content_vignette
+# You would generate this once by running pandoc manually with these temp files.
+mocked_pandoc_json_output <- '{
+  "pandoc-api-version": [1,23,1],
+  "meta": {
+    "references": { "t": "MetaList", "c": [
+      {"t": "MetaMap", "c": {"id": {"t": "MetaString", "c": "Vignette2023"}, "type": {"t": "MetaString", "c": "article-journal"}, "issued": {"t": "MetaString", "c": "2023"}, "author": {"t": "MetaList", "c": [{"t":"MetaMap", "c":{"family":{"t":"MetaString", "c":"Ignette"}, "given":{"t":"MetaString", "c":"V."}}}, {"t":"MetaMap", "c":{"family":{"t":"MetaString", "c":"Ser"}, "given":{"t":"MetaString", "c":"U."}}}] } } },
+      {"t": "MetaMap", "c": {"id": {"t": "MetaString", "c": "Vignette2022"}, "type": {"t": "MetaString", "c": "paper-conference"}, "issued": {"t": "MetaString", "c": "2022"}, "author": {"t": "MetaList", "c": [{"t":"MetaMap", "c":{"family":{"t":"MetaString", "c":"Ser"}, "given":{"t":"MetaString", "c":"U."}}}]} } } 
+    ]}
+  },
+  "blocks": [{ "t": "Div", "c": [ ["refs", [], []], [
+    {"t":"Div", "c": [["ref-Vignette2023",["csl-entry"],[]], [{"t":"Para","c":[{"t":"Str","c":"Ignette, V., & Ser, U. "},{"t":"Str","c":"(2023). "},{"t":"Str","c":"A Vignette Title."}]}]]},
+    {"t":"Div", "c": [["ref-Vignette2022",["csl-entry"],[]], [{"t":"Para","c":[{"t":"Str","c":"Ser, U. "},{"t":"Str","c":"(2022). "},{"t":"Str","c":"Conference Example."}]}]]}
+  ]]}]
+}'
+
+# Mock the internal helpers
+mockery::stub(academicCVtools::create_publication_list, ".validate_create_publication_list_args", TRUE)
+mockery::stub(academicCVtools::create_publication_list, ".validate_executable_found", "/mock/pandoc") # Mock pandoc path
+mockery::stub(academicCVtools::create_publication_list, ".call_pandoc_json", mocked_pandoc_json_output)
+
+publication_typst_string <- academicCVtools::create_publication_list(
+  bib_file = temp_bib_file,
+  author_name = "U. Ser", # Author to highlight
+  csl_file = temp_csl_file,
+  author_highlight_markup = "#underline[%s]"
+)
+
+# Clean up temporary files
+unlink(temp_bib_file)
+unlink(temp_csl_file)
+```
+
+## Step 3: Formatting Data Sections for Typst
+
+Now, we use `format_typst_section()` to convert the R data frames into Typst code.
+
+```{r format_work_experience}
+work_experience_typst <- format_typst_section(
+  data = cv_data$work_exp,
+  typst_func = "#cvWorkEntry", # Example Typst function name in your template
+  combine_cols = c(Institution, Location), # Combine these two
+  combine_as = "affiliation",
+  combine_sep = ", " # Separator for combined string
+)
+
+# Show a snippet of the generated Typst for work experience
+cat(substr(work_experience_typst, 1, 300), "...\n")
+```
+
+The `publication_typst_string` from the previous step is already formatted.
+
+## Step 4: Integrating into a Quarto/Typst Document
+
+In your Quarto (`.qmd`) document that is set to output to Typst, you would include R code chunks.
+
+**Conceptual `.qmd` structure:**
+
+```` qmd
+---
+title: "My Academic CV"
+format: typst
+# Optional: Specify your custom Typst template
+# typst-template: my_cv_template.typ 
+---
+
+```{r setup, include=FALSE}
+# This chunk runs first to set up data
+library(academicCVtools)
+library(dplyr) # If you do any data manipulation here
+
+# Perform Google Authentication if not done elsewhere
+googlesheets4::gs4_auth() 
+
+# --- Load CV Data ---
+my_cv_doc_id <- "YOUR_ACTUAL_GOOGLE_SHEET_ID"
+sheets_config <- list(
+ "Work Experience" = "work_exp",
+ "Education" = "education_hist"
+)
+cv_data <- load_cv_sheets(
+ doc_identifier = my_cv_doc_id,
+ sheets_to_load = sheets_config
+)
+
+# --- Load Publication Data ---
+bib_file_path <- "path/to/your/bibliography.bib"
+csl_file_path <- "path/to/your/style.csl"
+my_name <- "Your Name"
+publication_typst_string <- create_publication_list(
+ bib_file = bib_file_path,
+ author_name = my_name,
+ csl_file = csl_file_path
+)
+
+# --- For this Vignette, we use the mocked data from above ---
+# Re-assign for clarity within this conceptual qmd
+cv_data_for_qmd <- cv_data_list_mocked 
+publication_typst_string_for_qmd <- publication_typst_string
+```
+
+## Work Experience
+
+```{r work_experience_qmd, results='asis', echo=FALSE}
+# Use the data prepared in this vignette's setup
+work_experience_typst_for_qmd <- format_typst_section(
+  data = cv_data_for_qmd$work_exp, # Using data from vignette setup
+  typst_func = "#cvWorkEntry", 
+  combine_cols = c(Institution, Location),
+  combine_as = "affiliation",
+  combine_sep = ", "
+)
+cat(work_experience_typst_for_qmd)
+```
+
+## Education
+
+```{r education_qmd, results='asis', echo=FALSE}
+education_typst_for_qmd <- format_typst_section(
+  data = cv_data_for_qmd$education_hist, # Using data from vignette setup
+  typst_func = "#cvEducationEntry"
+)
+cat(education_typst_for_qmd)
+```
+
+## Publications
+
+```{r publications_qmd, results='asis', echo=FALSE}
+cat(publication_typst_string_for_qmd) # Using string from vignette setup
+```
+
+**Typst Template Side:**
+
+Your Typst template (e.g., `my_cv_template.typ`) would need to define functions like `#cvWorkEntry`, `#cvEducationEntry`, and `#publication-list` (or whatever you named it in `typst_func_name`). These Typst functions receive an array of dictionaries (one dictionary per CV entry/publication) and are responsible for the visual layout.
+
+Example Typst function (conceptual):
+
+```typst
+// In your .typ template file
+
+#let cvWorkEntry(entries) = {
+  for entry in entries {
+    // Access entry data like entry.Period, entry.Role, entry.affiliation
+    // Format it using Typst layout functions (e.g., grid, columns)
+    [
+      *Period:* #entry.Period \
+      *Role:* #entry.Role \
+      *Affiliation:* #entry.affiliation \
+      *Details:* #entry.Details
+    ]
+    parbreak() // Or other spacing
+  }
+}
+
+// Similar functions for #cvEducationEntry, #publication-list etc.
+// For publications, the item might be raw Typst markup already.
+#let publication-list(entries) = {
+  for entry in entries {
+    // entry.label is the group label, entry.item is the formatted string
+    strong(entry.label) // Example: make label bold
+    entry.item // The item is already formatted Typst content
+    parbreak()
+  }
+}
+```
+````
+
+## Conclusion
+
+The `academicCVtools` package streamlines the process of generating CVs by separating content management (in Google Sheets and BibTeX files) from the presentation layer (Typst templates via Quarto). This approach makes updates easier and allows for flexible, automated CV creation.
+
+Explore the documentation for `format_typst_section` and `create_publication_list` for more customization options.
