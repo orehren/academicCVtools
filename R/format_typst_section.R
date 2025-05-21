@@ -162,27 +162,21 @@ format_typst_section <- function(data,
                                  combine_sep = "\\n",
                                  combine_prefix = "- ",
                                  exclude_cols = NULL,
-<<<<<<< HEAD
                                  na_action = c("omit", "keep", "string"),
                                  output_mode = c("rowwise", "array")) {
-=======
-                                 output_mode = c("rowwise", "array"),
-                                 na_action = c("omit", "keep", "string")) {
->>>>>>> refs/remotes/origin/master
+
   # ============================================================================
   # Phase 0: Validate Arguments
   # ============================================================================
   combine_cols_quo <- rlang::enquo(combine_cols)
   exclude_cols_quo <- rlang::enquo(exclude_cols)
-<<<<<<< HEAD
+
   temp_output_mode <- output_mode # Store original for validator
   if(length(output_mode) > 1) output_mode <- output_mode[1]
 
   na_action <- match.arg(na_action)
-  output_mode <- rlang::arg_match(output_mode)
-=======
+
   output_mode <- match.arg(output_mode)
->>>>>>> refs/remotes/origin/master
 
   # Call the dedicated validation function (defined in validation_helpers.R)
   .validate_format_typst_section_args(
