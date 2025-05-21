@@ -48,7 +48,7 @@
 #' @importFrom tidyr unite pivot_longer
 #' @importFrom purrr pmap_chr map_chr keep discard map
 #' @importFrom stringr str_c str_replace_all str_glue
-#' @importFrom rlang enquo is_empty syms !!! parse_exprs quos expr quo_is_null
+#' @importFrom rlang enquo is_empty syms !!! parse_exprs quos expr quo_is_null arg_match
 #' @importFrom tidyselect everything
 #' @importFrom cli cli_warn cli_inform cli_abort
 #'
@@ -171,14 +171,14 @@ format_typst_section <- function(data,
   temp_output_mode <- output_mode # Store original for validator
   if(length(output_mode) > 1) output_mode <- output_mode[1]
 
+  na_action <- match.arg(na_action)
+  output_mode <- rlang::arg_match(output_mode)
+
   # Call the dedicated validation function (defined in validation_helpers.R)
   .validate_format_typst_section_args(
     data, typst_func, combine_cols_quo, combine_as, combine_sep,
-    combine_prefix, exclude_cols_quo, na_action
+    combine_prefix, exclude_cols_quo, na_action, output_mode
   )
-
-  na_action <- match.arg(na_action)
-  output_mode <- rlang::match.arg(output_mode)
 
   # ============================================================================
   # Phase 1: Handle Empty Data Input
