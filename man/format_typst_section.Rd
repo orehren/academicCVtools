@@ -12,7 +12,8 @@ format_typst_section(
   combine_sep = "\\\\n",
   combine_prefix = "- ",
   exclude_cols = NULL,
-  na_action = c("omit", "keep", "string")
+  na_action = c("omit", "keep", "string"),
+  output_mode = c("rowwise", "array")
 )
 }
 \arguments{
@@ -48,6 +49,12 @@ involved in \code{combine_cols}. Must be one of \code{"omit"}, \code{"keep"}, or
 - \code{"omit"} (default): Key-value pairs with \code{NA} values are omitted.
 - \code{"keep"}: \code{NA} values are converted to Typst's \code{none} literal.
 - \code{"string"}: \code{NA} values are converted to the string \code{"NA"}.}
+
+\item{output_mode}{Character string: Defines the output structure.
+Must be one of \code{"rowwise"} (default) or \code{"array"}.
+- \code{"rowwise"}: Generates a separate Typst function call for each row.
+- \code{"array"}: Generates a single Typst function call passing an array
+of all row dictionaries.}
 }
 \value{
 A single character string containing Typst code. This string consists

@@ -16,9 +16,10 @@
 #'         `combine_col_names` is empty.
 #'
 #' @importFrom dplyr select all_of %>%
-#' @importFrom purrr pmap_chr discard
-#' @importFrom stringr str_c
-#' @importFrom cli cli_warn
+#' @importFrom purrr pmap_chr discard map map_chr
+#' @importFrom stringr str_c str_glue
+#' @importFrom cli cli_warn cli_abort
+#' @importFrom rlang expr %||%
 #'
 #' @noRd
 none <- NULL
@@ -113,37 +114,55 @@ none <- NULL
 }
 
 
+# #' Handle NA values in a single row based on na_action
+# #' @param row_data A named list representing a row.
+# #' @param na_action String: "omit", "keep", or "string".
+# #' @return A named list with NAs processed.
+# #' @noRd
+# #' @importFrom purrr discard map
+# #' @importFrom rlang expr
+# .handle_na_in_row <- function(row_data, na_action)
+#   if (na_action == "omit") {
+#     return(
+#       purrr::discard(
+#         row_data, is.na
+#       )
+#     )
+#   }
+#
+#   if (na_action == "keep") {
+#     return(
+#       purrr::map(
+#         row_data, ~ if (is.na(.x)) rlang::expr(none) else .x
+#       )
+#     )
+#   }
+#
+#   # Assume na_action == "string" (match.arg happened earlier)
+#   return(
+#     purrr::map(
+#       row_data, ~ if (is.na(.x)) "NA" else as.character(.x)
+#     )
+#   )
+# }
+
+# --- Helper 3: NA Handling (aus Antwort #169) ---
 #' Handle NA values in a single row based on na_action
 #' @param row_data A named list representing a row.
 #' @param na_action String: "omit", "keep", or "string".
 #' @return A named list with NAs processed.
 #' @noRd
-#' @importFrom purrr discard map
-#' @importFrom rlang expr
 .handle_na_in_row <- function(row_data, na_action) {
   if (na_action == "omit") {
-    return(
-      purrr::discard(
-        row_data, is.na
-      )
-    )
+    return(purrr::discard(row_data, is.na))
   }
-
   if (na_action == "keep") {
-    return(
-      purrr::map(
-        row_data, ~ if (is.na(.x)) rlang::expr(none) else .x
-      )
-    )
+    return(purrr::map(row_data, ~ if (is.na(.x)) rlang::expr(none) else .x))
   }
-
-  # Assume na_action == "string" (match.arg happened earlier)
-  return(
-    purrr::map(
-      row_data, ~ if (is.na(.x)) "NA" else as.character(.x)
-    )
-  )
+  # Assume na_action == "string"
+  return(purrr::map(row_data, ~ if (is.na(.x)) "NA" else as.character(.x)))
 }
+
 
 
 #' Format a single key-value pair for Typst dictionary
@@ -171,25 +190,16 @@ none <- NULL
 
 #' Process a single row for Typst output (flatter version)
 #' @param ... Arguments representing the row data.
-#' @param .typst_func The Typst function name (passed via pmap).
 #' @param .na_action The NA action (passed via pmap).
 #' @return A single string for the Typst function call or "".
 #' @noRd
 #' @importFrom purrr map_chr discard
 #' @importFrom stringr str_c
-.process_single_row_for_typst <- function(..., .typst_func, .na_action) {
+.process_single_row_for_typst <- function(..., .na_action) {
   row_data <- list(...)
-
-  # 1. Handle NA values using helper
   processed_row_data <- .handle_na_in_row(row_data, .na_action)
+  if (length(processed_row_data) == 0) return("")
 
-  # Guard Clause: Return empty string if row becomes empty
-  if (length(processed_row_data) == 0) {
-    return("")
-  }
-
-  # 2. Format key-value pairs using helper
-  # Use map_chr with names for cleaner iteration
   kv_pairs <- purrr::map_chr(
     seq_along(processed_row_data),
     ~ .format_single_kv_pair(
@@ -197,10 +207,8 @@ none <- NULL
       value = processed_row_data[[.x]]
     )
   )
+  return(paste0("(", stringr::str_c(kv_pairs, collapse = ", "), ")"))
 
-  # 3. Combine pairs and create function call
-  args_string <- stringr::str_c(kv_pairs, collapse = ", ")
-  return(paste0(.typst_func, "(", args_string, ")"))
 }
 
 
@@ -212,23 +220,21 @@ none <- NULL
 #' @return A character vector of Typst function calls, filtered for empty strings.
 #' @noRd
 #' @importFrom purrr pmap_chr
-.generate_typst_rows <- function(data_proc, typst_func, na_action) {
-  # Guard clause: If data is empty, return empty vector
-  if (nrow(data_proc) == 0) {
-    return(character(0))
-  }
+.generate_typst_rows <- function(data_proc, typst_func, na_action, output_mode) {
+  if (nrow(data_proc) == 0) return(character(0))
 
-  # Apply the row processing function using pmap_chr
-  # Pass typst_func and na_action explicitly using the . prefix convention
-  typst_lines <- purrr::pmap_chr(
+  dictionary_strings <- purrr::pmap_chr(
     data_proc,
     .f = .process_single_row_for_typst,
-    .typst_func = typst_func,
     .na_action = na_action
   )
 
-  # Filter out empty lines
-  typst_lines <- typst_lines[typst_lines != ""]
+  dictionary_strings <- dictionary_strings[dictionary_strings != ""]
+  if (length(dictionary_strings) == 0) return(character(0))
 
-  return(typst_lines)
+  if (output_mode == "rowwise") {
+    return(paste0(typst_func, dictionary_strings))
+  } else {
+    return(dictionary_strings)
+  }
 }

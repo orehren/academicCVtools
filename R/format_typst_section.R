@@ -33,7 +33,11 @@
 #'        - `"omit"` (default): Key-value pairs with `NA` values are omitted.
 #'        - `"keep"`: `NA` values are converted to Typst's `none` literal.
 #'        - `"string"`: `NA` values are converted to the string `"NA"`.
-#'
+#' @param output_mode Character string: Defines the output structure.
+#'        Must be one of `"rowwise"` (default) or `"array"`.
+#'        - `"rowwise"`: Generates a separate Typst function call for each row.
+#'        - `"array"`: Generates a single Typst function call passing an array
+#'          of all row dictionaries.
 #' @return A single character string containing Typst code. This string consists
 #'         of multiple Typst function calls (one per row of `data`), wrapped
 #'         in a ```{typst} ... ``` block. Returns an empty Typst block
@@ -157,12 +161,15 @@ format_typst_section <- function(data,
                                  combine_sep = "\\n",
                                  combine_prefix = "- ",
                                  exclude_cols = NULL,
-                                 na_action = c("omit", "keep", "string")) {
+                                 na_action = c("omit", "keep", "string"),
+                                 output_mode = c("rowwise", "array")) {
   # ============================================================================
   # Phase 0: Validate Arguments
   # ============================================================================
   combine_cols_quo <- rlang::enquo(combine_cols)
   exclude_cols_quo <- rlang::enquo(exclude_cols)
+  temp_output_mode <- output_mode # Store original for validator
+  if(length(output_mode) > 1) output_mode <- output_mode[1]
 
   # Call the dedicated validation function (defined in validation_helpers.R)
   .validate_format_typst_section_args(
@@ -171,6 +178,7 @@ format_typst_section <- function(data,
   )
 
   na_action <- match.arg(na_action)
+  output_mode <- rlang::match.arg(output_mode)
 
   # ============================================================================
   # Phase 1: Handle Empty Data Input
@@ -219,24 +227,40 @@ format_typst_section <- function(data,
   typst_lines <- .generate_typst_rows(
     data_proc = data_proc,
     typst_func = typst_func,
-    na_action = na_action
+    na_action = na_action,
+    output_mode = output_mode
   )
 
   # ============================================================================
   # Phase 5: Final Output Assembly
   # ============================================================================
+
   # Handle case where generate_typst_rows returns empty vector (all rows filtered)
   if (length(typst_lines) == 0) {
-    # Return empty block instead of block with empty content
-    return("```{=typst}\n```")
+
+    if (output_mode == "array") {
+      return(stringr::str_glue("```{{typst}}\n{typst_func}(())\n```"))
+    } else {
+      return("```{=typst}\n```")
+    }
   }
 
   # Assemble the final Typst block
-  final_typst_string <- stringr::str_glue(
-    "```{{=typst}}\n",
-    "{stringr::str_c(typst_lines, collapse = '\\n')}\n",
-    "```"
-  )
+  if (output_mode == "rowwise") {
+    final_typst_string <- stringr::str_glue(
+      "```{{typst}}\n",
+      "{stringr::str_c(typst_lines, collapse = '\\n')}\n",
+      "```"
+    )
+  } else {
+    array_content <- stringr::str_c(typst_lines, collapse = ",\n  ")
+    final_typst_string <- stringr::str_glue(
+      "```{{typst}}\n",
+      "{typst_func}((\n  {array_content}\n))\n",
+      "```"
+    )
+  }
+
 
   return(final_typst_string)
 }
