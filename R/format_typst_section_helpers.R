@@ -154,7 +154,7 @@ none <- NULL
 #' @importFrom stringr str_glue
 #' @importFrom rlang expr
 .format_single_kv_pair <- function(key, value) {
-  key_fmt <- stringr::str_glue("\"{key}\"") # Key is always quoted string
+  key_fmt <- stringr::str_glue("{key}")
   value_fmt <- ""
 
   # This if/else is now the only nesting here
