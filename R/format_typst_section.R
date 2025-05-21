@@ -233,7 +233,7 @@ format_typst_section <- function(data,
 
   # Assemble the final Typst block
   final_typst_string <- stringr::str_glue(
-    "```{{typst}}\n",
+    "```{{=typst}}\n",
     "{stringr::str_c(typst_lines, collapse = '\\n')}\n",
     "```"
   )
