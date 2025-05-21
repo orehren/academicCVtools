@@ -224,13 +224,14 @@
 #' @param combine_prefix Prefix for combined items.
 #' @param exclude_cols Tidyselect expression for columns to exclude.
 #' @param na_action How to handle NA values.
+#' @param output_mode Mode of output: "rowwise" or "array".
 #' @return Invisibly returns TRUE if all checks pass.
 #' @noRd
 #' @importFrom checkmate assert_data_frame assert_string assert_character assert_choice assert_multi_class assert
 #' @importFrom rlang enquo quo_is_null
 .validate_format_typst_section_args <- function(
     data, typst_func, combine_cols, combine_as, combine_sep,
-    combine_prefix, exclude_cols, na_action
+    combine_prefix, exclude_cols, na_action, output_mode
   ) {
   # Check data (must be data frame, allow 0 rows but not NULL)
   checkmate::assert_data_frame(data, null.ok = FALSE, .var.name = "data")
@@ -242,6 +243,7 @@
   checkmate::assert_string(combine_as, min.chars = 1, .var.name = "combine_as")
   checkmate::assert_string(combine_sep, .var.name = "combine_sep") # Allow empty string
   checkmate::assert_string(combine_prefix, .var.name = "combine_prefix") # Allow empty string
+  checkmate::assert_choice(output_mode, choices = c("rowwise", "array"), .var.name = "output_mode")
 
   # Check na_action (must be one of the allowed choices)
   # Note: match.arg happens in the main function, assert_choice checks here
