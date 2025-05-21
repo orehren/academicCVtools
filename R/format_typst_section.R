@@ -243,7 +243,7 @@ format_typst_section <- function(data,
   if (length(typst_lines) == 0) {
 
     if (output_mode == "array") {
-      return(stringr::str_glue("```{{typst}}\n{typst_func}(())\n```"))
+      return(stringr::str_glue("```{{=typst}}\n{typst_func}(())\n```"))
     } else {
       return("```{=typst}\n```")
     }
@@ -252,14 +252,14 @@ format_typst_section <- function(data,
   # Assemble the final Typst block
   if (output_mode == "rowwise") {
     final_typst_string <- stringr::str_glue(
-      "```{{typst}}\n",
+      "```{{=typst}}\n",
       "{stringr::str_c(typst_lines, collapse = '\\n')}\n",
       "```"
     )
   } else {
     array_content <- stringr::str_c(typst_lines, collapse = ",\n  ")
     final_typst_string <- stringr::str_glue(
-      "```{{typst}}\n",
+      "```{{=typst}}\n",
       "{typst_func}((\n  {array_content}\n))\n",
       "```"
     )
