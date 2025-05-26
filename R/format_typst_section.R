@@ -160,7 +160,7 @@ format_typst_section <- function(data,
                                  combine_cols = NULL,
                                  combine_as = "details",
                                  combine_sep = "\\ ",
-                                 combine_prefix = "- ",
+                                 combine_prefix = "· ",
                                  exclude_cols = NULL,
                                  na_action = c("omit", "keep", "string"),
                                  output_mode = c("rowwise", "array")) {

@@ -116,12 +116,19 @@ load_cv_sheets <- function(doc_identifier,
   # Aborts on failure.
   .validate_load_cv_sheets_args(doc_identifier, sheets_to_load, ...)
 
+  ss_input <- .resolve_doc_identifier(doc_identifier)
   # ============================================================================
   # Phase 1: Prepare Loading Configuration
   # ============================================================================
   # Call helper to get sheet names and target names
   # (Defined in load_cv_sheets_helpers.R)
-  load_config <- .prepare_sheet_load_config(sheets_to_load)
+  load_config <- .prepare_sheet_load_config(sheets_to_load, ss_input = ss_input)
+
+  # Guard Clause: If no sheets to read (e.g., "*" on empty doc, or empty list)
+  if (length(load_config$sheet_names_to_read) == 0) {
+    cli::cli_inform("No sheets specified or found to load. Returning an empty list.")
+    return(list())
+  }
 
   # ============================================================================
   # Phase 2: Load Data Iteratively
@@ -131,15 +138,29 @@ load_cv_sheets <- function(doc_identifier,
   # Pass down ... arguments
 
   # Prepare arguments explicitly
-  args_for_loader <- rlang::list2(
+  # args_for_loader <- rlang::list2(
+  #   sheet_names_to_read = load_config$sheet_names_to_read,
+  #   doc_identifier = doc_identifier,
+  #   ... # Capture dots with list2
+  # )
+  #
+  # # Call the helper using do.call
+  # loaded_data_list_unnamed <- do.call(.load_sheets_data, args_for_loader)
+
+  # loaded_data_list_named <- purrr::set_names(
+  #   loaded_data_list_unnamed,
+  #   load_config$target_list_names
+  # )
+
+  loaded_data_list_unnamed <- .load_sheets_data(
     sheet_names_to_read = load_config$sheet_names_to_read,
-    doc_identifier = doc_identifier,
-    ... # Capture dots with list2
+    doc_identifier, #  ss_input, # Verwende das aufgelöste ss_input
+    !!!list(...)
   )
 
-  # Call the helper using do.call
-  loaded_data_list_unnamed <- do.call(.load_sheets_data, args_for_loader)
-
+  # ============================================================================
+    # Phase 3: Set Names and Return
+    # ============================================================================
   loaded_data_list_named <- purrr::set_names(
     loaded_data_list_unnamed,
     load_config$target_list_names

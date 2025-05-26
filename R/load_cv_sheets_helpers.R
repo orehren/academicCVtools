@@ -6,7 +6,9 @@
 #' based on the structure of the sheets_to_load argument.
 #' Assumes basic validation of sheets_to_load has already occurred.
 #'
-#' @param sheets_to_load A named list/vector OR an unnamed character vector.
+#' @param sheets_to_load A named list/vector, an unnamed character vector, or the string "*".
+#' @param ss_input The resolved Google Sheet identifier (ID string, URL string, or dribble),
+#'        needed if sheets_to_load is "*".
 #'
 #' @return A list containing two elements:
 #'         - `sheet_names_to_read`: Character vector of sheet names.
@@ -15,31 +17,56 @@
 #' @importFrom rlang is_named check_installed
 #' @importFrom janitor make_clean_names
 #' @importFrom cli cli_inform
+#' @importFrom googlesheets4 sheet_names
 #'
 #' @noRd
-.prepare_sheet_load_config <- function(sheets_to_load) {
-
-  is_named_input <- rlang::is_named(sheets_to_load)
+.prepare_sheet_load_config <- function(sheets_to_load, ss_input = NULL) { # ss_input hinzugefügt
 
   sheet_names_to_read <- NULL
   target_list_names <- NULL
 
-  if (is_named_input) {
-    sheet_names_to_read <- names(sheets_to_load)
-    # Ensure values are used as names, force to character
-    target_list_names <- as.character(unlist(sheets_to_load))
-  } else {
-    # Input is unnamed character vector (validation ensures this)
-    sheet_names_to_read <- sheets_to_load
-    # Check dependency and generate names
-    rlang::check_installed("janitor", reason = "to automatically generate list names from sheet names when 'sheets_to_load' is unnamed.")
+  is_special_wildcard <- is.character(sheets_to_load) && length(sheets_to_load) == 1 && sheets_to_load == "*"
+
+  if (is_special_wildcard) {
+    # Fetch all sheet names from the document
+    if (is.null(ss_input)) {
+      # This should not happen if called correctly from load_cv_sheets
+      cli::cli_abort("Internal error: {.arg ss_input} must be provided when {.arg sheets_to_load} is \"*\".", call. = FALSE)
+    }
+    cli::cli_inform("Fetching all sheet names from the document...")
+    sheet_names_to_read <- tryCatch({
+      googlesheets4::sheet_names(ss_input)
+    }, error = function(e) {
+      cli::cli_abort("Failed to retrieve sheet names from the document when 'sheets_to_load = \"*\"'.", parent = e, call. = FALSE)
+    })
+
+    if (length(sheet_names_to_read) == 0) {
+      cli::cli_warn("No sheets found in the document or failed to retrieve names.")
+      # Return empty config to produce empty list later
+      return(list(sheet_names_to_read = character(0), target_list_names = character(0)))
+    }
+
+    # Generate target names from fetched sheet names
+    rlang::check_installed("janitor", reason = "to automatically generate list names from sheet names when 'sheets_to_load' is \"*\".")
     target_list_names <- janitor::make_clean_names(sheet_names_to_read)
-    cli::cli_inform(
-      "Using cleaned sheet names as names for the returned list: {.val {target_list_names}}"
-    )
+    cli::cli_inform("Using all {length(sheet_names_to_read)} sheets found: {paste(shQuote(sheet_names_to_read), collapse = ', ')}. Target list names: {.val {target_list_names}}")
+
+  } else {
+    # Existing logic for named list/vector or unnamed character vector
+    is_named_input <- rlang::is_named(sheets_to_load)
+    if (is_named_input) {
+      sheet_names_to_read <- names(sheets_to_load)
+      target_list_names <- as.character(unlist(sheets_to_load))
+    } else {
+      sheet_names_to_read <- sheets_to_load
+      rlang::check_installed("janitor", reason = "to automatically generate list names from sheet names when 'sheets_to_load' is unnamed.")
+      target_list_names <- janitor::make_clean_names(sheet_names_to_read)
+      cli::cli_inform(
+        "Using cleaned sheet names as names for the returned list: {.val {target_list_names}}"
+      )
+    }
   }
 
-  # Return both vectors in a list
   return(list(
     sheet_names_to_read = sheet_names_to_read,
     target_list_names = target_list_names

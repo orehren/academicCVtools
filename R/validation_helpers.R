@@ -49,81 +49,34 @@
 .validate_load_cv_sheets_args <- function(doc_identifier, sheets_to_load, ...) {
   checkmate::assert_string(doc_identifier, min.chars = 1, .var.name = "doc_identifier")
 
-  is_list_or_atomic <- rlang::is_list(sheets_to_load) || is.atomic(sheets_to_load)
-  checkmate::assert(is_list_or_atomic,
-    "Argument {.arg sheets_to_load} must be a list or an atomic vector.",
-    .var.name = "sheets_to_load"
-  )
+  is_special_wildcard <- checkmate::test_string(sheets_to_load, fixed = "*")
 
-  is_named_arg <- rlang::is_named(sheets_to_load)
+  if (!is_special_wildcard) {
+    is_list_or_atomic <- rlang::is_list(sheets_to_load) || is.atomic(sheets_to_load)
+    checkmate::assert(is_list_or_atomic,
+                      "Argument {.arg sheets_to_load} must be the string \"*\", a list, or an atomic vector.",
+                      .var.name = "sheets_to_load")
 
-  if (is_named_arg) {
-    # --- Validation for NAMED list/vector ---
+    is_named_arg <- rlang::is_named(sheets_to_load)
 
-    # 1. Check Names (Sheet Names): Must exist, be non-empty, unique. Allow any chars.
-    checkmate::assert_character(names(sheets_to_load),
-      min.chars = 1,
-      any.missing = FALSE,
-      unique = TRUE,
-      null.ok = FALSE,
-      .var.name = "names(sheets_to_load) (Sheet Names)"
-    )
-
-    # 2. Check Elements (Target List Names): Must all be single non-empty strings.
-    target_names <- unlist(sheets_to_load)
-    checkmate::assert_character(target_names,
-      min.chars = 1,
-      any.missing = FALSE,
-      null.ok = FALSE,
-      .var.name = "values in sheets_to_load (Target List Names)"
-    )
-
-    # Optional but recommended: Check if target names are valid R names
-    are_valid_r_names <- checkmate::test_names(target_names, type = "strict")
-    checkmate::assert(are_valid_r_names,
-      "Values in named {.arg sheets_to_load} (Target List Names) must be syntactically valid R names (no spaces, special chars etc.).",
-      .var.name = "values in sheets_to_load"
-    )
-
-    # 3. Check base type consistency and element type if list
-    if (rlang::is_list(sheets_to_load)) {
-      # Check if it's a list of characters, WITHOUT checking name syntax here
-      checkmate::assert_list(sheets_to_load,
-        types = "character",
-        # names = "strict", # <-- REMOVED THIS
-        min.len = 0,
-        .var.name = "sheets_to_load (list elements type)"
-      )
-      # Check elements are single strings (already covered by unlist/assert_character above?)
-      # Let's keep this for lists specifically to ensure no multi-element characters
-      all_elements_scalar <- all(sapply(sheets_to_load, checkmate::test_string))
-      checkmate::assert(all_elements_scalar,
-        "All elements in named list {.arg sheets_to_load} must be single strings.",
-        .var.name = "sheets_to_load elements scalar"
-      )
-    } else { # Must be an atomic vector
-      # Check if it's a character vector (names checked separately above)
-      checkmate::assert_character(sheets_to_load, # names = "strict" removed here too
-        min.len = 0,
-        any.missing = FALSE,
-        .var.name = "sheets_to_load (vector elements)"
-      )
-      # Check elements non-empty (already done via unlist above)
+    if (is_named_arg) {
+      checkmate::assert_character(names(sheets_to_load), min.chars = 1, any.missing = FALSE, unique = TRUE, null.ok = FALSE, .var.name = "names(sheets_to_load) (Sheet Names)")
+      target_names <- unlist(sheets_to_load)
+      checkmate::assert_character(target_names, min.chars = 1, any.missing = FALSE, null.ok = FALSE, .var.name = "values in sheets_to_load (Target List Names)")
+      are_valid_r_names <- checkmate::test_names(target_names, type = "strict")
+      checkmate::assert(are_valid_r_names, "Values in named {.arg sheets_to_load} (Target List Names) must be syntactically valid R names.", .var.name = "values in sheets_to_load")
+      if (rlang::is_list(sheets_to_load)) {
+        checkmate::assert_list(sheets_to_load, types = "character", min.len = 0, .var.name = "sheets_to_load (list elements type)")
+        all_elements_scalar <- all(sapply(sheets_to_load, checkmate::test_string))
+        checkmate::assert(all_elements_scalar, "All elements in named list {.arg sheets_to_load} must be single strings.", .var.name = "sheets_to_load elements scalar")
+      } else {
+        checkmate::assert_character(sheets_to_load, min.len = 0, any.missing = FALSE, .var.name = "sheets_to_load (vector elements)")
+      }
+    } else {
+      checkmate::assert_character(sheets_to_load, any.missing = FALSE, null.ok = FALSE, names = "unnamed", .var.name = "sheets_to_load (unnamed)")
+      checkmate::assert_character(sheets_to_load, min.chars = 1, any.missing = FALSE, .var.name = "sheet names in sheets_to_load (unnamed)")
     }
-  } else {
-    # --- Validation for UNNAMED list/vector ---
-    # Must be a character vector
-    checkmate::assert_character(sheets_to_load,
-      any.missing = FALSE, null.ok = FALSE,
-      names = "unnamed",
-      .var.name = "sheets_to_load (unnamed)"
-    )
-    # Elements (sheet names) must not be empty strings
-    checkmate::assert_character(sheets_to_load,
-      min.chars = 1, any.missing = FALSE,
-      .var.name = "sheet names in sheets_to_load (unnamed)"
-    )
-  }
+  } # Ende if (!is_special_wildcard)
 
   invisible(TRUE)
 }
