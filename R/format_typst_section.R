@@ -21,7 +21,7 @@
 #'        dictionary that will contain the combined values. Defaults to `"details"`.
 #'        Must be a single, non-empty string.
 #' @param combine_sep Character string: The separator used when joining the
-#'        values from `combine_cols`. Defaults to `"\\n"` (newline). Can be empty.
+#'        values from `combine_cols`. Defaults to `"\\ "` (newline). Can be empty.
 #' @param combine_prefix Character string: A prefix added to each non-NA value
 #'        before joining. Defaults to `"- "`. Can be empty.
 #' @param exclude_cols Optional: A vector of column names or a tidyselect
@@ -159,7 +159,7 @@ format_typst_section <- function(data,
                                  typst_func,
                                  combine_cols = NULL,
                                  combine_as = "details",
-                                 combine_sep = "\\n",
+                                 combine_sep = "\\ ",
                                  combine_prefix = "- ",
                                  exclude_cols = NULL,
                                  na_action = c("omit", "keep", "string"),

@@ -297,7 +297,6 @@ format_date_range <- function(data,
   end_col_sym <- rlang::sym(end_col)
   output_col_sym <- rlang::sym(output_col)
 
-  # Erwartete Input-Datumsformate für parse_date_time
   expected_date_formats <- c(
     "Ymd", "Y-m-d", "Y/m/d",
     "dmY", "d-m-Y", "d/m/Y",
@@ -317,9 +316,6 @@ format_date_range <- function(data,
           start_dt = .parse_to_posixct_or_na(start_dt_val, expected_date_formats),
           end_dt = .parse_to_posixct_or_na(end_dt_val, expected_date_formats),
 
-          # Ab hier bleibt die Logik gleich, aber wir verwenden as.Date()
-          # um von POSIXct zu Date für format() zu konvertieren,
-          # da format.POSIXct andere Standardformate haben kann.
           start_str = dplyr::case_when(
             !is.na(start_dt) ~ format(as.Date(start_dt), output_format),
             TRUE ~ ""

@@ -9,7 +9,7 @@ format_typst_section(
   typst_func,
   combine_cols = NULL,
   combine_as = "details",
-  combine_sep = "\\\\n",
+  combine_sep = "\\\\ ",
   combine_prefix = "- ",
   exclude_cols = NULL,
   na_action = c("omit", "keep", "string"),
@@ -34,7 +34,7 @@ dictionary that will contain the combined values. Defaults to \code{"details"}.
 Must be a single, non-empty string.}
 
 \item{combine_sep}{Character string: The separator used when joining the
-values from \code{combine_cols}. Defaults to \code{"\\\\n"} (newline). Can be empty.}
+values from \code{combine_cols}. Defaults to \code{"\\\\ "} (newline). Can be empty.}
 
 \item{combine_prefix}{Character string: A prefix added to each non-NA value
 before joining. Defaults to \code{"- "}. Can be empty.}
