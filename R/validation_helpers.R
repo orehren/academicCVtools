@@ -268,3 +268,37 @@
 
   invisible(TRUE)
 }
+
+
+#' Validate arguments for format_date_range function
+#' Uses checkmate for assertions. Aborts on failure.
+#' @param data The input data frame.
+#' @param start_col Name of the start date column.
+#' @param end_col Name of the end date column.
+#' @param output_col Name for the new combined date column.
+#' @param output_format String format for the dates (e.g., "%Y", "%m/%Y").
+#' @param sep Separator string between start and end dates.
+#' @param ongoing_label Label for ongoing items.
+#' @noRd
+#' @importFrom checkmate assert_data_frame assert_string assert_subset assert_choice
+.validate_format_date_range_args <- function(data, start_col, end_col, output_col, output_format, sep, ongoing_label) {
+
+  # Check basic types
+  checkmate::assert_data_frame(data, .var.name = "data")
+  checkmate::assert_string(start_col, min.chars = 1, .var.name = "start_col")
+  checkmate::assert_string(end_col, min.chars = 1, .var.name = "end_col")
+  checkmate::assert_string(output_col, min.chars = 1, .var.name = "output_col")
+  checkmate::assert_string(output_format, min.chars = 1, .var.name = "output_format")
+  checkmate::assert_string(sep, .var.name = "sep") # Allow empty
+  checkmate::assert_string(ongoing_label, min.chars = 1, .var.name = "ongoing_label")
+
+  # Check if columns exist in the data frame
+  checkmate::assert_subset(c(start_col, end_col), choices = names(data),
+                           .var.name = "start_col/end_col")
+
+  # A simple check for valid format specifiers
+  # This is not exhaustive but catches common errors
+  if (!grepl("^[%Ymd]+[/.-]*[%Ymd]*[/.-]*[%Ymd]*$", output_format)) {
+    cli::cli_warn("Argument {.arg output_format} {.val {output_format}} seems unusual. Ensure it uses valid strftime specifiers like %Y, %m, %d.")
+  }
+}

@@ -33,7 +33,8 @@ Imports:
     magrittr,
     tidyselect,
     janitor,
-    checkmate
+    checkmate,
+    lubridate
 Suggests:
     knitr, 
     rmarkdown, 

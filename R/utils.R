@@ -213,9 +213,6 @@ evaluate_tidyselect_safely <- function(quo, data, arg_name_str) {
 }
 
 
-
-# In R/utils.R hinzufügen:
-
 #' Check multiple arguments are single, non-empty strings
 #' Iterates over a named list where names are argument names (as strings)
 #' and values are the argument values to be checked.
@@ -227,4 +224,166 @@ check_multiple_single_strings <- function(args_list) {
   # Use iwalk to iterate over names (.y) and values (.x) of the list
   purrr::iwalk(args_list, ~ check_single_string(arg_value = .x, arg_name = .y))
   # No explicit return needed, works via side-effect (potential abort)
+}
+
+
+#' Combine start and end date columns into a formatted date range string
+#'
+#' This function takes a data frame and the names of two columns containing
+#' start and end dates (expected to be R Date objects or coercible to Date).
+#' It creates a new column with a formatted string representing the date range
+#' (e.g., "YYYY - YYYY", "MM/YYYY - Present").
+#'
+#' @param data A data frame or tibble.
+#' @param start_col The name of the column containing the start dates (character).
+#' @param end_col The name of the column containing the end dates (character).
+#' @param output_col The name for the new column that will contain the
+#'        formatted date range string (character). Defaults to `"date_range"`.
+#' @param output_format A string specifying the desired output format for the
+#'        dates, using standard R `strftime` specifiers (e.g., `"%Y"`, `"%m/%Y"`,
+#'        `"%d/%m/%Y"`). Defaults to `"%m/%Y"`.
+#' @param sep The separator string to use between the formatted start and
+#'        end dates. Defaults to `" - "`.
+#' @param ongoing_label The string to use for the end date if it is `NA` or
+#'        interpreted as ongoing. Defaults to `"Present"`.
+#'
+#' @return The input data frame with an added column containing the
+#'         formatted date range strings.
+#'
+#' @importFrom dplyr mutate rowwise %>% pull case_when
+#' @importFrom rlang sym !! :=
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' df <- dplyr::tibble(
+#'   start_date = as.Date(c("2020-01-01", "2021-05-01", NA, "2022-03-01")),
+#'   completion_date = as.Date(c("2020-12-31", NA, "2021-08-15", "2022-03-01"))
+#' )
+#'
+#' # Basic usage
+#' format_date_range(df, "start_date", "completion_date")
+#'
+#' # Different output format and column name
+#' format_date_range(df, "start_date", "completion_date",
+#'                   output_col = "Period", output_format = "%Y")
+#'
+#' # Different separator and ongoing label
+#' format_date_range(df, "start_date", "completion_date",
+#'                   sep = " to ", ongoing_label = "Current")
+#'
+#' # Handle cases where start_date might be a string coercible to Date
+#' df_string <- dplyr::tibble(
+#'   begin = c("2020-01-01", "2021/05/01"),
+#'   end = c("2020-12-31", NA)
+#' )
+#' format_date_range(df_string, "begin", "end")
+#' }
+format_date_range <- function(data,
+                              start_col,
+                              end_col,
+                              output_col = "date_range",
+                              output_format = "%m/%Y",
+                              sep = " - ",
+                              ongoing_label = "Present") {
+
+  .validate_format_date_range_args(
+    data, start_col, end_col, output_col,
+    output_format, sep, ongoing_label
+  )
+
+  start_col_sym <- rlang::sym(start_col)
+  end_col_sym <- rlang::sym(end_col)
+  output_col_sym <- rlang::sym(output_col)
+
+  # Erwartete Input-Datumsformate für parse_date_time
+  expected_date_formats <- c(
+    "Ymd", "Y-m-d", "Y/m/d",
+    "dmY", "d-m-Y", "d/m/Y",
+    "mdY", "m-d-Y", "m/d/Y",
+    "Ym", "Y-m", "Y/m",
+    "mY", "m-Y", "m/Y",
+    "Y"
+  )
+
+  data_processed <- data %>%
+    dplyr::mutate(
+      !!output_col_sym := dplyr::rowwise(.) %>%
+        dplyr::mutate(
+          start_dt_val = !!start_col_sym,
+          end_dt_val = !!end_col_sym,
+
+          start_dt = .parse_to_posixct_or_na(start_dt_val, expected_date_formats),
+          end_dt = .parse_to_posixct_or_na(end_dt_val, expected_date_formats),
+
+          # Ab hier bleibt die Logik gleich, aber wir verwenden as.Date()
+          # um von POSIXct zu Date für format() zu konvertieren,
+          # da format.POSIXct andere Standardformate haben kann.
+          start_str = dplyr::case_when(
+            !is.na(start_dt) ~ format(as.Date(start_dt), output_format),
+            TRUE ~ ""
+          ),
+          end_str = dplyr::case_when(
+            !is.na(end_dt) ~ format(as.Date(end_dt), output_format),
+            is.na(end_dt) && !is.na(start_dt) ~ ongoing_label,
+            TRUE ~ ""
+          ),
+          date_range_temp = dplyr::case_when(
+            nzchar(start_str) && nzchar(end_str) && end_str != ongoing_label ~ paste0(start_str, sep, end_str),
+            nzchar(start_str) && end_str == ongoing_label ~ paste0(start_str, sep, end_str),
+            nzchar(start_str) && !nzchar(end_str) ~ start_str,
+            !nzchar(start_str) && nzchar(end_str) && end_str != ongoing_label ~ end_str,
+            TRUE ~ ""
+          )
+        ) %>%
+        dplyr::pull(date_range_temp)
+    )
+
+  return(data_processed)
+}
+
+
+#' Date/Time Helper: Parse a value to POSIXct or return POSIXct NA
+#'
+#' Attempts to parse a value (which can be a Date, POSIXt, or string)
+#' into a POSIXct object using a list of expected formats.
+#' Returns NA (of type POSIXct) if parsing fails or input is NA/empty.
+#'
+#' @param value The value to parse.
+#' @param formats A character vector of date-time formats to try with
+#'        `lubridate::parse_date_time`.
+#' @return A POSIXct object or `as.POSIXct(NA)`.
+#'
+#' @importFrom lubridate is.Date is.POSIXt parse_date_time
+#'
+#' @noRd
+.parse_to_posixct_or_na <- function(value, formats) {
+  # If already a Date object, convert to POSIXct (at midnight UTC)
+  if (lubridate::is.Date(value)) {
+    return(as.POSIXct(value, tz = "UTC"))
+  }
+  # If already a POSIXt object, return as is
+  if (lubridate::is.POSIXt(value)) {
+    return(value)
+  }
+  # Handle NA, NULL, or empty strings before attempting to parse
+  if (is.na(value) || is.null(value) || !nzchar(as.character(value))) {
+    return(as.POSIXct(NA_real_)) # Explicit POSIXct NA
+  }
+
+  # Attempt to parse the string using the provided formats
+  parsed_date <- suppressWarnings(
+    lubridate::parse_date_time(as.character(value),
+                               orders = formats,
+                               quiet = TRUE,
+                               tz = "UTC") # Specify timezone for consistency
+  )
+
+  # Ensure NA result is also POSIXct NA
+  if (is.na(parsed_date)) {
+    return(as.POSIXct(NA_real_))
+  }
+
+  return(parsed_date)
 }
