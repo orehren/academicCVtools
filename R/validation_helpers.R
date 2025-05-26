@@ -73,11 +73,20 @@
         checkmate::assert_character(sheets_to_load, min.len = 0, any.missing = FALSE, .var.name = "sheets_to_load (vector elements)")
       }
     } else {
-      checkmate::assert_character(sheets_to_load, any.missing = FALSE, null.ok = FALSE, names = "unnamed", .var.name = "sheets_to_load (unnamed)")
-      checkmate::assert_character(sheets_to_load, min.chars = 1, any.missing = FALSE, .var.name = "sheet names in sheets_to_load (unnamed)")
-    }
-  } # Ende if (!is_special_wildcard)
+      is_unnamed_list_of_chars <- checkmate::test_list(sheets_to_load, types = "character", names = "unnamed", min.len = 0)
+      is_unnamed_char_vector <- checkmate::test_character(sheets_to_load, names = "unnamed", min.len = 0)
 
+      checkmate::assert(is_unnamed_list_of_chars || is_unnamed_char_vector,
+                        "If {.arg sheets_to_load} is unnamed, it must be a list of character strings or a character vector.",
+                        .var.name = "sheets_to_load (unnamed type)")
+
+      # Elements (sheet names) must not be empty strings
+      # unlist works for both lists of characters and character vectors
+      sheet_name_values <- unlist(sheets_to_load)
+      checkmate::assert_character(sheet_name_values, min.chars = 1, any.missing = FALSE,
+                                  .var.name = "sheet names in sheets_to_load (unnamed)")
+    }
+  }
   invisible(TRUE)
 }
 
