@@ -72,10 +72,10 @@ rm "$DOWNLOAD_FILE"
 # --- 5. Post-Install Configuration ---
 # (This section is unchanged)
 echo "Info: Configuring RStudio Server..."
-ln -fs /usr/lib/rstudio-server/bin/rstudio-server /usr/local/bin
-ln -fs /usr/lib/rstudio-server/bin/rserver /usr/local/bin
-rm -f /var/lib/rstudio-server/secure-cookie-key
-mkdir -p /etc/R
+sudo ln -fs /usr/lib/rstudio-server/bin/rstudio-server /usr/local/bin
+sudo ln -fs /usr/lib/rstudio-server/bin/rserver /usr/local/bin
+sudo rm -f /var/lib/rstudio-server/secure-cookie-key
+sudo mkdir -p /etc/R
 R_BIN="$(which R)"
 echo "rsession-which-r=${R_BIN}" | sudo tee /etc/rstudio/rserver.conf > /dev/null
 echo "lock-type=advisory" | sudo tee /etc/rstudio/file-locks > /dev/null
