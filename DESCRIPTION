@@ -1,7 +1,7 @@
 Package: academicCVtools
 Type: Package
 Title: Tools to Generate Academic CV Sections from Google Sheets for Typst/Quarto
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person(given = "Oliver",
            family = "Rehren",
@@ -18,7 +18,7 @@ License: GPL-3 | file LICENSE
 Encoding: UTF-8
 LazyData: true
 ByteCompile: true
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: 
     cli,
     dplyr,
@@ -32,9 +32,7 @@ Imports:
     jsonlite,
     magrittr,
     tidyselect,
-    janitor,
-    checkmate,
-    lubridate
+    checkmate
 Suggests:
     knitr, 
     rmarkdown, 

@@ -1,0 +1,129 @@
+---
+title: "Using academicCVtools to Create a Data-Driven CV"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using academicCVtools to Create a Data-Driven CV}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(academicCVtools)
+```
+
+## Introduction
+
+This vignette will walk you through the process of using the `academicCVtools` package to create a data-driven academic CV. We'll cover the entire workflow, from setting up your data in a Google Sheet to generating a polished CV with Quarto and Typst.
+
+## The Workflow
+
+The basic workflow is as follows:
+
+1.  **Create a Google Sheet** with your CV data (e.g., education, work experience, publications).
+2.  **Create a Quarto document** that will serve as your CV.
+3.  **Use `load_cv_sheets()`** to pull your data from the Google Sheet into your Quarto document.
+4.  **Use `format_typst_section()`** to format your data into Typst function calls.
+5.  **Use `create_publication_list()`** to generate a formatted publication list from a `.bib` file.
+6.  **Render your Quarto document** to produce your final CV.
+
+## Setting up Your Google Sheet
+
+The first step is to create a Google Sheet with your CV data. Each sheet should correspond to a section of your CV (e.g., "Education", "Work Experience"). The first row of each sheet should be a header row with column names.
+
+For example, your "Education" sheet might look like this:
+
+| Degree | Institution | Year |
+|---|---|---|
+| PhD in Psychology | University of Example | 2020 |
+| MS in Psychology | University of Example | 2016 |
+| BS in Psychology | University of Example | 2014 |
+
+## Creating a Quarto Document
+
+Next, create a new Quarto document (`.qmd`) that will serve as your CV. This document will contain the R code that pulls your data from the Google Sheet and formats it for output.
+
+Here's a basic example of what your Quarto document might look like:
+
+```quarto
+---
+title: "My Academic CV"
+format: typst
+---
+
+## Education
+
+```{r, eval=FALSE}
+#| output: asis
+library(academicCVtools)
+library(dplyr)
+
+# Replace with your Google Sheet ID
+sheet_id <- "YOUR_GOOGLE_SHEET_ID"
+
+# Load the "Education" sheet
+education <- load_cv_sheets(sheet_id, "Education")
+
+# Format the data
+format_typst_section(
+  education$Education,
+  typst_func = "cvEntry"
+)
+```
+
+## Work Experience
+
+```{r, eval=FALSE}
+#| output: asis
+
+# Load the "Work Experience" sheet
+work_experience <- load_cv_sheets(sheet_id, "Work Experience")
+
+# Format the data
+format_typst_section(
+  work_experience$`Work Experience`,
+  typst_func = "cvEntry"
+)
+```
+```
+
+## Using `create_publication_list()`
+
+You can also use `create_publication_list()` to generate a formatted publication list from a `.bib` file. This is useful if you already have your publications in a BibTeX database.
+
+Here's an example of how you might use this function in your Quarto document:
+
+```quarto
+## Publications
+
+```{r}
+#| output: asis
+
+# Create a dummy .bib file for this example
+bib_content <- c(
+  "@article{Author2023, author={Jane Doe}, title={A great paper}, year={2023}}",
+  "@inproceedings{Author2022, author={Jane Doe}, title={A conference talk}, year={2022}}"
+)
+bib_file <- tempfile(fileext = ".bib")
+writeLines(bib_content, bib_file)
+
+# Create a dummy .csl file for this example
+csl_content <- '<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
+  <info><title>Simple CSL</title><id>simple-csl</id></info>
+  <bibliography><layout><text variable="title"/></layout></bibliography>
+</style>'
+csl_file <- tempfile(fileext = ".csl")
+writeLines(csl_content, csl_file)
+
+# Generate the publication list
+create_publication_list(
+  bib_file = bib_file,
+  author_name = "Jane Doe",
+  csl_file = csl_file
+)
+```
+```

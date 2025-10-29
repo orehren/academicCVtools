@@ -2,7 +2,7 @@
 % Please edit documentation in R/create_publication_list.R
 \name{create_publication_list}
 \alias{create_publication_list}
-\title{Create a grouped, sorted, and formatted publication list for Typst}
+\title{Create a formatted publication list for Typst from a .bib file}
 \usage{
 create_publication_list(
   bib_file,
@@ -20,162 +20,100 @@ create_publication_list(
 )
 }
 \arguments{
-\item{bib_file}{Path to the .bib file. Must be a single, non-empty string
-pointing to an existing, readable \code{.bib} file.}
+\item{bib_file}{Path to the \code{.bib} bibliography file.}
 
-\item{author_name}{Name of the author to highlight within the formatted
-publication strings. Must be a single, non-empty string.}
+\item{author_name}{The full name of the author to highlight in publications.}
 
-\item{csl_file}{Path to the .csl file. Must be a single, non-empty string
-pointing to an existing, readable \code{.csl} file.}
+\item{csl_file}{Path to the \code{.csl} citation style file for formatting.}
 
-\item{group_labels}{Named list or named character vector mapping lowercase
-BibTeX entry types (e.g., "article", "inproceedings") to the desired
-display labels (e.g., "Journal Article", "Conference Paper").
-Both names (BibTeX types) and values (display labels) must be
-single, non-empty strings, and names must be unique.
-Defaults to a standard set of mappings.}
+\item{group_labels}{A named character vector to map BibTeX entry types
+(e.g., \code{article}) to user-friendly display labels (e.g., \code{"Journal Article"}).
+Defaults to a standard set of academic publication types.}
 
-\item{default_label}{Label to use for BibTeX types not found in \code{group_labels}.
-Must be a single, non-empty string. Defaults to \code{"Other"}.}
+\item{default_label}{The display label for any entry types not found in
+\code{group_labels}. Defaults to \code{"Other"}.}
 
-\item{group_order}{Optional: A character vector specifying the desired
-sort order of the display labels (values from \code{group_labels} or
-\code{default_label}). Labels present in the data but not in
-\code{group_order} are appended alphabetically after the specified ones.
-If provided, must be a character vector with unique, non-missing values.
-If \code{NULL} (default), groups are sorted alphabetically by label.}
+\item{group_order}{An optional character vector specifying the desired
+display order of the \code{group_labels}. If \code{NULL}, groups are sorted
+alphabetically.}
 
-\item{pandoc_path}{Optional: Path to the Pandoc executable. If \code{NULL} (default),
-Pandoc is expected to be in the system's PATH. If provided, must be a
-single, non-empty string (existence is checked later).}
+\item{pandoc_path}{An optional path to the Pandoc executable. If \code{NULL},
+Pandoc is assumed to be in the system's PATH.}
 
-\item{author_highlight_markup}{Typst markup string used for highlighting the
-\code{author_name}. Must contain the placeholder \\%s exactly once, which
-will be replaced by the \code{author_name}. Must be a single, non-empty string.
-Defaults to \code{"#strong[\%s]"}.}
+\item{author_highlight_markup}{The Typst markup to apply for highlighting the
+author. Must contain a \verb{\%s} placeholder for the author's name.
+Defaults to \code{"#strong[\%s]"}, which makes the name bold.}
 
-\item{typst_func_name}{Name of the Typst function that will receive the
-publication list data (the array of label/item pairs). The output
-string will be formatted like \verb{#function_name(( (label:"...", item:"..."), ... ))}.
-Must be a single, non-empty string (without the leading '#').
-Defaults to \code{"publication-list"}.}
+\item{typst_func_name}{The name of the Typst function that will receive the
+publication data. Defaults to \code{"publication-list"}.}
 }
 \value{
-A single character string containing a Typst code block (\verb{```\{=typst\} ... ```})
-with the formatted publication list, ready to be included in a Quarto
-document via \code{output: asis}. Returns an empty Typst array block if
-no processable entries are found after validation and processing.
+A single character string containing a Typst code block (\verb{```\{=typst\} ... ```}).
+If no valid publication entries are found, it returns an empty Typst array block.
+This output is intended to be used in a Quarto document with \code{output: asis}.
 }
 \description{
-Reads a .bib file, uses Pandoc with a CSL file to generate JSON output
-containing formatted citations and metadata. Extracts structural information,
-groups and sorts entries (optionally by custom group order), highlights an
-author, and returns the result as a Typst code block suitable for a
-two-column layout (label + formatted item). Argument validation is performed
-using assertions from the \code{checkmate} package via an internal helper function.
+This function provides a comprehensive workflow for generating a publication
+list suitable for an academic CV in Typst. It reads a bibliography file,
+processes it using Pandoc and a CSL stylesheet, and then groups, sorts, and
+formats the entries into a Typst-ready code block.
+}
+\details{
+The process follows these key steps:
+\enumerate{
+\item \strong{Argument Validation:} Ensures all inputs are correct and files exist.
+\item \strong{Pandoc Execution:} Calls Pandoc with \code{citeproc} to convert the \code{.bib}
+file into a structured JSON output.
+\item \strong{JSON Parsing & Validation:} Parses the JSON and validates its structure.
+\item \strong{Data Extraction:} Extracts metadata (e.g., citation key, year) and the
+formatted citation strings from the JSON.
+\item \strong{Processing:} Joins the metadata and formatted strings, assigns group
+labels (e.g., "Journal Article"), and highlights the specified author's name.
+\item \strong{Sorting:} Sorts the publications by group and then by year (descending).
+\item \strong{Typst Output:} Generates the final Typst code block, which calls a
+Typst function with the processed data.
+}
 }
 \examples{
 \dontrun{
-# --- Setup ---
-# Create dummy bib file
+# --- Setup: Create dummy files for a reproducible example ---
 bib_content <- c(
-  "@article{Author2023Title,
-            author={First Author and Second Author},
-            title={A Title},
-            year={2023},
-            journal={Some Journal}
-            }",
-  "@inproceedings{Author2022Conf,
-                  author={Second Author},
-                  title={Conf Paper},
-                  year={2022},
-                  booktitle={Proc. Conf}
-                  }",
-  "@misc{AuthorNodatePrep,
-         author={First Author},
-         title={In Prep},
-         howpublished={In Review}
-         }",
-  "@book{Third2021Book,
-         author={Third Person},
-         title={A Book},
-         year={2021},
-         publisher={Pub Co}
-         }"
+  "@article{Author2023, author={Jane Doe}, title={A great paper}, year={2023}}",
+  "@inproceedings{Author2022, author={Jane Doe}, title={A conference talk}, year={2022}}"
 )
 bib_file <- tempfile(fileext = ".bib")
 writeLines(bib_content, bib_file)
 
-# Create dummy CSL (or use a real one) - e.g., download apa.csl
-# For this example, create a minimal dummy file if needed
 csl_content <- '<?xml version="1.0" encoding="utf-8"?>
 <style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
-  <info>
-    <title>Minimal Example</title>
-    <id>minimal-example</id>
-    <link href="http://example.com" rel="self"/>
-    <updated>2024-01-01T00:00:00+00:00</updated>
-  </info>
-  <bibliography>
-    <layout>
-      <text variable="title"/>
-    </layout>
-  </bibliography>
+  <info><title>Simple CSL</title><id>simple-csl</id></info>
+  <bibliography><layout><text variable="title"/></layout></bibliography>
 </style>'
 csl_file <- tempfile(fileext = ".csl")
 writeLines(csl_content, csl_file)
 
-author_to_highlight <- "First Author"
-
 # --- Basic Usage ---
-# Assumes pandoc is in PATH
-try(
-  {
-    typst_out_basic <- create_publication_list(
-      bib_file = bib_file,
-      author_name = author_to_highlight,
-      csl_file = csl_file
-    )
-    cat(typst_out_basic)
-  },
-  silent = TRUE
+# This generates a Typst block with two publications, highlighting "Jane Doe".
+typst_output <- create_publication_list(
+  bib_file = bib_file,
+  author_name = "Jane Doe",
+  csl_file = csl_file
 )
+cat(typst_output)
 
 # --- Custom Grouping and Order ---
-custom_labels <- c(article = "Peer-Reviewed", book = "Monographs", misc = "Other")
-custom_order <- c("Peer-Reviewed", "Monographs", "Conference Items", "Other")
-# Note: "Conference Items" comes from default_label mapping for inproceedings
+custom_labels <- c(article = "Peer-Reviewed Papers", inproceedings = "Talks")
+custom_order <- c("Peer-Reviewed Papers", "Talks")
 
-try(
-  {
-    typst_out_custom <- create_publication_list(
-      bib_file = bib_file,
-      author_name = author_to_highlight,
-      csl_file = csl_file,
-      group_labels = custom_labels,
-      default_label = "Conference Items", # Assign remaining types here
-      group_order = custom_order,
-      author_highlight_markup = "#emph[\%s]"
-    )
-    cat(typst_out_custom)
-  },
-  silent = TRUE
+typst_output_custom <- create_publication_list(
+  bib_file = bib_file,
+  author_name = "Jane Doe",
+  csl_file = csl_file,
+  group_labels = custom_labels,
+  group_order = custom_order,
+  author_highlight_markup = "#emph[\%s]" # Italicize the author
 )
-
-# --- Invalid Input Example (should error) ---
-try(
-  {
-    create_publication_list(
-      bib_file = "nonexistent.bib", # File doesn't exist
-      author_name = author_to_highlight,
-      csl_file = csl_file
-    )
-  },
-  error = function(e) {
-    print(paste("Successfully caught expected error:", e$message))
-  }
-)
+cat(typst_output_custom)
 
 # --- Cleanup ---
 unlink(bib_file)

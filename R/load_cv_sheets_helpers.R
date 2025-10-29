@@ -14,8 +14,7 @@
 #'         - `sheet_names_to_read`: Character vector of sheet names.
 #'         - `target_list_names`: Character vector for naming the output list.
 #'
-#' @importFrom rlang is_named check_installed
-#' @importFrom janitor make_clean_names
+#' @importFrom rlang is_named
 #' @importFrom cli cli_inform
 #' @importFrom googlesheets4 sheet_names
 #'
@@ -47,8 +46,7 @@
     }
 
     # Generate target names from fetched sheet names
-    rlang::check_installed("janitor", reason = "to automatically generate list names from sheet names when 'sheets_to_load' is \"*\".")
-    target_list_names <- janitor::make_clean_names(sheet_names_to_read)
+    target_list_names <- gsub("[^[:alnum:]_]+", "_", tolower(sheet_names_to_read))
     cli::cli_inform("Using all {length(sheet_names_to_read)} sheets found: {paste(shQuote(sheet_names_to_read), collapse = ', ')}. Target list names: {.val {target_list_names}}")
 
   } else {
@@ -59,8 +57,7 @@
       target_list_names <- as.character(unlist(sheets_to_load))
     } else {
       sheet_names_to_read <- sheets_to_load
-      rlang::check_installed("janitor", reason = "to automatically generate list names from sheet names when 'sheets_to_load' is unnamed.")
-      target_list_names <- janitor::make_clean_names(sheet_names_to_read)
+      target_list_names <- gsub("[^[:alnum:]_]+", "_", tolower(sheet_names_to_read))
       cli::cli_inform(
         "Using cleaned sheet names as names for the returned list: {.val {target_list_names}}"
       )

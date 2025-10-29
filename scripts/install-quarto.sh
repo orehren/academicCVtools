@@ -1,42 +1,85 @@
 #!/bin/bash
-# This script is sourced by the main setup.sh script.
-# It installs the Quarto CLI and its specific dependencies.
+# install-quarto.sh
 
-# --- 1. Install Dependencies ---
-echo "Info: Installing Quarto system dependencies..."
+# Stop on error
+set -e
 
-quarto_packages=(
-    wget
-    ca-certificates
-)
-apt_install "${quarto_packages[@]}"
+# Function to check for command existence
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
 
+# Default Quarto version if not provided
+QUARTO_VERSION=${1:-"1.4.553"} # Default to a recent, stable version
 
-# --- 2. Define Variables ---
-DOWNLOAD_FILE="quarto.deb"
-
-# Map architecture (uname -m gives x86_64, Quarto URLs use amd64)
-if [ "$ARCH" = "x86_64" ]; then
+# Architecture detection
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)
     QUARTO_ARCH="amd64"
-elif [ "$ARCH" = "aarch64" ]; then
+    ;;
+  aarch64 | arm64)
     QUARTO_ARCH="arm64"
-else
-    echo "Error: Unsupported architecture for Quarto: $ARCH" >&2
+    ;;
+  *)
+    echo "Unsupported architecture: $ARCH"
     exit 1
+    ;;
+esac
+
+# Construct download URL
+QUARTO_URL="https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-${QUARTO_ARCH}.deb"
+DEB_FILE="quarto-${QUARTO_VERSION}-linux-${QUARTO_ARCH}.deb"
+
+# Check if Quarto is already installed and at the correct version
+if command_exists quarto && [[ $(quarto --version) == "${QUARTO_VERSION}" ]]; then
+  echo "Quarto version ${QUARTO_VERSION} is already installed."
+  exit 0
 fi
 
-echo "Info: Downloading Quarto CLI $QUARTO_VERSION for $QUARTO_ARCH..."
+echo "Quarto not found or wrong version. Installing/updating Quarto ${QUARTO_VERSION}..."
 
-# --- 3. Download Logic ---
-if [ "$QUARTO_VERSION" = "latest" ]; then
-    wget "https://quarto.org/download/latest/quarto-linux-${QUARTO_ARCH}.deb" -O "$DOWNLOAD_FILE"
+# Clean up previous downloads if they exist
+rm -f quarto-*.deb
+
+# Download the specified version of Quarto
+echo "Downloading Quarto from ${QUARTO_URL}..."
+curl -sSL -o "${DEB_FILE}" "${QUARTO_URL}"
+if [ $? -ne 0 ]; then
+  echo "Failed to download Quarto. Please check the URL and your connection."
+  exit 1
+fi
+
+# Install the downloaded .deb file
+echo "Installing ${DEB_FILE}..."
+sudo dpkg -i "${DEB_FILE}"
+if [ $? -ne 0 ]; then
+  echo "Failed to install Quarto. Running apt-get install -f to fix potential dependencies..."
+  # Attempt to fix broken dependencies, which is a common issue with dpkg
+  sudo apt-get install -f -y
+  # Retry installation
+  sudo dpkg -i "${DEB_FILE}"
+  if [ $? -ne 0 ]; then
+    echo "Quarto installation failed even after attempting to fix dependencies."
+    exit 1
+  fi
+fi
+
+# Clean up the downloaded file
+rm -f "${DEB_FILE}"
+
+# Verify installation
+echo "Verifying Quarto installation..."
+if command_exists quarto; then
+  INSTALLED_VERSION=$(quarto --version)
+  echo "Quarto version ${INSTALLED_VERSION} installed successfully."
+  # Optional: check if installed version matches requested version
+  if [[ "$INSTALLED_VERSION" != "$QUARTO_VERSION" ]]; then
+    echo "Warning: Installed version ($INSTALLED_VERSION) does not match requested version ($QUARTO_VERSION)."
+  fi
 else
-    wget "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-${QUARTO_ARCH}.deb" -O "$DOWNLOAD_FILE"
+  echo "Quarto installation could not be verified."
+  exit 1
 fi
 
-# --- 4. Install ---
-echo "Info: Installing .deb package..."
-sudo gdebi --non-interactive "$DOWNLOAD_FILE"
-rm "$DOWNLOAD_FILE"
-
-echo "Info: Quarto CLI installation complete."
+echo "Script finished."

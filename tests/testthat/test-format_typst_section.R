@@ -33,7 +33,7 @@ test_that("format_typst_section works for basic case with default NA handling", 
   expect_false(grepl("Detail_B.+NA", actual_output) || grepl("Detail_B.+none", actual_output)) # Nicht als "NA" oder none
   expect_false(grepl("Notes.+NA", actual_output) || grepl("Notes.+none", actual_output))
   # Prüfen, ob ein bekannter Wert da ist
-  expect_true(grepl(fixed('"Title": "Project Alpha"'), actual_output))
+  expect_true(grepl(fixed('Title: "Project Alpha"'), actual_output))
 })
 
 # --- Test Block 2: Column combination ---
@@ -54,13 +54,13 @@ test_that("format_typst_section correctly combines columns", {
 
   # Zusätzliche, robustere Prüfungen:
   # 1. Sind die Original-Detail-Spalten weg?
-  expect_false(grepl(fixed('"Detail_A":'), actual_output),
+  expect_false(grepl(fixed('Detail_A:'), actual_output),
                info = "Original column Detail_A should be removed after combining.")
-  expect_false(grepl(fixed('"Detail_B":'), actual_output),
+  expect_false(grepl(fixed('Detail_B:'), actual_output),
                info = "Original column Detail_B should be removed after combining.")
 
   # 2. Ist die neue Spalte 'key_points' vorhanden?
-  expect_true(grepl(fixed('"key_points":'), actual_output),
+  expect_true(grepl(fixed('key_points:'), actual_output),
               info = "New combined column 'key_points' should be present.")
 
   # 3. Optionale, weniger fragile Inhaltsprüfung für die kombinierte Spalte (Beispiel für Zeile 2)
@@ -86,14 +86,14 @@ test_that("format_typst_section correctly excludes columns", {
   expect_snapshot(cat(actual_output))
 
   # Spezifische Prüfungen
-  expect_false(grepl(fixed('"Status":'), actual_output),
+  expect_false(grepl(fixed('Status:'), actual_output),
                info = "Column 'Status' should be excluded.")
-  expect_false(grepl(fixed('"Notes":'), actual_output),
+  expect_false(grepl(fixed('Notes:'), actual_output),
                info = "Column 'Notes' should be excluded.")
-  expect_false(grepl(fixed('"Location":'), actual_output),
+  expect_false(grepl(fixed('Location:'), actual_output),
                info = "Column 'Location' should be excluded.")
   # Prüfen, ob eine nicht ausgeschlossene Spalte noch da ist
-  expect_true(grepl(fixed('"Title":'), actual_output),
+  expect_true(grepl(fixed('Title:'), actual_output),
               info = "Column 'Title' should still be present.")
 })
 
@@ -112,18 +112,18 @@ test_that("format_typst_section handles combining and excluding simultaneously",
   expect_snapshot(cat(actual_output))
 
   # Prüfungen
-  expect_true(grepl(fixed('"key_info":'), actual_output),
+  expect_true(grepl(fixed('key_info:'), actual_output),
               info = "Combined column 'key_info' should be present.")
-  expect_false(grepl(fixed('"Detail_A":'), actual_output),
+  expect_false(grepl(fixed('Detail_A:'), actual_output),
                info = "Original 'Detail_A' should be removed.")
-  expect_false(grepl(fixed('"Location":'), actual_output),
+  expect_false(grepl(fixed('Location:'), actual_output),
                info = "Column 'Location' should be excluded.")
-  expect_false(grepl(fixed('"Description":'), actual_output),
+  expect_false(grepl(fixed('Description:'), actual_output),
                info = "Column 'Description' should be excluded.")
-  expect_false(grepl(fixed('"Notes":'), actual_output),
+  expect_false(grepl(fixed('Notes:'), actual_output),
                info = "Column 'Notes' should be excluded.")
   # Prüfen, ob eine nicht berührte Spalte noch da ist
-  expect_true(grepl(fixed('"Date":'), actual_output),
+  expect_true(grepl(fixed('Date:'), actual_output),
               info = "Column 'Date' should still be present.")
 })
 
@@ -138,8 +138,8 @@ test_that("format_typst_section handles na_action correctly", {
     na_action = "keep"
   )
   expect_snapshot(cat(output_na_keep)) # 'name' Argument entfernt
-  expect_true(grepl(fixed('"Detail_B": none'), output_na_keep), info = "NA in Detail_B (row 2) should be 'none'.")
-  expect_true(grepl(fixed('"Notes": none'), output_na_keep), info = "NA in Notes (row 3) should be 'none'.")
+  expect_true(grepl(fixed('Detail_B: none'), output_na_keep), info = "NA in Detail_B (row 2) should be 'none'.")
+  expect_true(grepl(fixed('Notes: none'), output_na_keep), info = "NA in Notes (row 3) should be 'none'.")
 
   # Test na_action = "string"
   output_na_string <- format_typst_section(
@@ -148,8 +148,8 @@ test_that("format_typst_section handles na_action correctly", {
     na_action = "string"
   )
   expect_snapshot(cat(output_na_string)) # 'name' Argument entfernt
-  expect_true(grepl(fixed('"Detail_B": "NA"'), output_na_string), info = "NA in Detail_B (row 2) should be '\"NA\"'.")
-  expect_true(grepl(fixed('"Notes": "NA"'), output_na_string), info = "NA in Notes (row 3) should be '\"NA\"'.")
+  expect_true(grepl(fixed('Detail_B: "NA"'), output_na_string), info = "NA in Detail_B (row 2) should be '\"NA\"'.")
+  expect_true(grepl(fixed('Notes: "NA"'), output_na_string), info = "NA in Notes (row 3) should be '\"NA\"'.")
 
   # Test na_action = "omit"
   output_na_omit <- format_typst_section(
