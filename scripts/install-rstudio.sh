@@ -52,22 +52,15 @@ fi
 echo "Info: Downloading RStudio $RSTUDIO_VERSION for $UBUNTU_CODENAME ($RSTUDIO_ARCH)..."
 
 # --- FIXED URLS ---
+
 # Download logic for stable/preview/daily
 if [ "$RSTUDIO_VERSION" = "stable" ] || [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
-
-    # Shim for stable builds: RStudio dropped bionic, use focal instead
     if [ "$UBUNTU_CODENAME" = "bionic" ]; then
         UBUNTU_CODENAME="focal"
     fi
-
-    # Use the 'download2.rstudio.org' host and the correct arch
-    # We still try to get a 'latest' file for simplicity.
-    wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${RSTUDIO_ARCH}/rstudio-server-latest-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE"
-
-# Download logic for specific version numbers
+    wget "https://rstudio.org/download/latest/${RSTUDIO_VERSION}/server/${UBUNTU_CODENAME}/rstudio-server-latest-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE"
 else
-    # Use the 'download2' host and the correct arch
-    wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${RSTUDIO_ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE" || \
+    wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${RSTUDIO_ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE" ||
         wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${RSTUDIO_ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE"
 fi
 
