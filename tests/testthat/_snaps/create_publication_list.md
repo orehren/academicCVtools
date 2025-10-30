@@ -20,7 +20,7 @@
         (label: "Conference Talks", item: "Conference Paper One (2022)"),
         (label: "Journal Contributions", item: "Article One (2023)"),
         (label: "Monographs", item: "Book Alpha (2021)"),
-        (label: "Other Publications", item: "Misc Item (2024)")
+        (label: "NA", item: "Misc Item (2024)")
       ))
       ```
 

@@ -27,25 +27,21 @@ create_publication_list(
 \item{csl_file}{Path to the \code{.csl} citation style file for formatting.}
 
 \item{group_labels}{A named character vector to map BibTeX entry types
-(e.g., \code{article}) to user-friendly display labels (e.g., \code{"Journal Article"}).
-Defaults to a standard set of academic publication types.}
+(e.g., \code{article}) to user-friendly display labels (e.g., \code{"Journal Article"}).}
 
 \item{default_label}{The display label for any entry types not found in
-\code{group_labels}. Defaults to \code{"Other"}.}
+\code{group_labels}.}
 
 \item{group_order}{An optional character vector specifying the desired
-display order of the \code{group_labels}. If \code{NULL}, groups are sorted
-alphabetically.}
+display order of the \code{group_labels}.}
 
-\item{pandoc_path}{An optional path to the Pandoc executable. If \code{NULL},
-Pandoc is assumed to be in the system's PATH.}
+\item{pandoc_path}{An optional path to the Pandoc executable.}
 
 \item{author_highlight_markup}{The Typst markup to apply for highlighting the
-author. Must contain a \verb{\%s} placeholder for the author's name.
-Defaults to \code{"#strong[\%s]"}, which makes the name bold.}
+author.}
 
 \item{typst_func_name}{The name of the Typst function that will receive the
-publication data. Defaults to \code{"publication-list"}.}
+publication data.}
 }
 \value{
 A single character string containing a Typst code block (\verb{```\{=typst\} ... ```}).
@@ -64,59 +60,9 @@ The process follows these key steps:
 \item \strong{Argument Validation:} Ensures all inputs are correct and files exist.
 \item \strong{Pandoc Execution:} Calls Pandoc with \code{citeproc} to convert the \code{.bib}
 file into a structured JSON output.
-\item \strong{JSON Parsing & Validation:} Parses the JSON and validates its structure.
-\item \strong{Data Extraction:} Extracts metadata (e.g., citation key, year) and the
-formatted citation strings from the JSON.
-\item \strong{Processing:} Joins the metadata and formatted strings, assigns group
-labels (e.g., "Journal Article"), and highlights the specified author's name.
-\item \strong{Sorting:} Sorts the publications by group and then by year (descending).
-\item \strong{Typst Output:} Generates the final Typst code block, which calls a
-Typst function with the processed data.
-}
-}
-\examples{
-\dontrun{
-# --- Setup: Create dummy files for a reproducible example ---
-bib_content <- c(
-  "@article{Author2023, author={Jane Doe}, title={A great paper}, year={2023}}",
-  "@inproceedings{Author2022, author={Jane Doe}, title={A conference talk}, year={2022}}"
-)
-bib_file <- tempfile(fileext = ".bib")
-writeLines(bib_content, bib_file)
-
-csl_content <- '<?xml version="1.0" encoding="utf-8"?>
-<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
-  <info><title>Simple CSL</title><id>simple-csl</id></info>
-  <bibliography><layout><text variable="title"/></layout></bibliography>
-</style>'
-csl_file <- tempfile(fileext = ".csl")
-writeLines(csl_content, csl_file)
-
-# --- Basic Usage ---
-# This generates a Typst block with two publications, highlighting "Jane Doe".
-typst_output <- create_publication_list(
-  bib_file = bib_file,
-  author_name = "Jane Doe",
-  csl_file = csl_file
-)
-cat(typst_output)
-
-# --- Custom Grouping and Order ---
-custom_labels <- c(article = "Peer-Reviewed Papers", inproceedings = "Talks")
-custom_order <- c("Peer-Reviewed Papers", "Talks")
-
-typst_output_custom <- create_publication_list(
-  bib_file = bib_file,
-  author_name = "Jane Doe",
-  csl_file = csl_file,
-  group_labels = custom_labels,
-  group_order = custom_order,
-  author_highlight_markup = "#emph[\%s]" # Italicize the author
-)
-cat(typst_output_custom)
-
-# --- Cleanup ---
-unlink(bib_file)
-unlink(csl_file)
+\item \strong{JSON Parsing & Transformation:} Parses the JSON and transforms it into a
+clean data frame. This includes handling empty/invalid inputs, extracting
+metadata, formatting citation strings, grouping, and author highlighting.
+\item \strong{Typst Output Generation:} Generates the final Typst code block.
 }
 }
