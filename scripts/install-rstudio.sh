@@ -1,77 +1,96 @@
 #!/bin/bash
-# install-rstudio.sh
+# This script is sourced by the main setup.sh script.
+# It installs RStudio Server and its specific dependencies.
 
-# Stop on error
-set -e
+# --- 1. Install Dependencies ---
+echo "Info: Installing RStudio system dependencies..."
 
-# Function to check for command existence
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
+# lsb-release is needed for $(lsb_release -cs)
+rstudio_packages=(
+    libclang-dev
+    lsb-release
+    psmisc
+    pwgen
+)
+apt_install "${rstudio_packages[@]}"
 
-# --- RStudio ---
-# Default version if not specified
-RSTUDIO_VERSION=${1:-"2023.12.1+402"} # Example: "2023.09.1+494"
-DEB_FILE="rstudio-${RSTUDIO_VERSION}-amd64.deb"
-DOWNLOAD_URL="https://download1.rstudio.org/electron/jammy/amd64/${DEB_FILE}"
 
-# Check if RStudio is already installed and at the correct version
-# Note: rstudio --version is not a standard command. Checking existence is more reliable.
-if command_exists rstudio; then
-  echo "RStudio is already installed. Skipping re-installation."
-  # A more advanced script could check the installed version, but this is often sufficient.
-  # For example: dpkg-query -W -f='${Version}' rstudio
-  exit 0
+# --- 2. Define Variables ---
+DOWNLOAD_FILE="rstudio-server.deb"
+export UBUNTU_CODENAME=$(lsb_release -cs)
+
+# --- 3. Download Logic (REVISED AND FIXED) ---
+
+# Alias for user-friendliness
+if [ "$RSTUDIO_VERSION" = "latest" ]; then
+    RSTUDIO_VERSION="stable"
 fi
 
-echo "RStudio not found. Installing RStudio version ${RSTUDIO_VERSION}..."
-
-# Clean up previous downloads if they exist
-rm -f rstudio-*-amd64.deb
-
-# --- Download ---
-echo "Downloading RStudio from ${DOWNLOAD_URL}..."
-curl -sSL -o "${DEB_FILE}" "${DOWNLOAD_URL}"
-if [ $? -ne 0 ]; then
-  echo "Failed to download RStudio. Please check the URL and your connection."
-  exit 1
-fi
-
-# --- Install Dependencies ---
-# RStudio has several dependencies. Gdebi is good at handling these, but if not
-# available, we can use apt. `apt-get install -f` will also be used later.
-echo "Updating package lists and installing dependencies..."
-sudo apt-get update
-sudo apt-get install -y libjpeg-dev libpng-dev libtiff-dev libssl-dev libcurl4-openssl-dev libxml2-dev
-
-# --- Install RStudio ---
-echo "Installing ${DEB_FILE}..."
-# Use gdebi if available, as it handles dependencies automatically
-if command_exists gdebi; then
-  sudo gdebi -n "${DEB_FILE}"
+# --- NEW: Architecture Mapping ---
+# Map system arch (x86_64) to RStudio's naming (amd64)
+if [ "$ARCH" = "x86_64" ]; then
+    RSTUDIO_ARCH="amd64"
+elif [ "$ARCH" = "aarch64" ]; then
+    RSTUDIO_ARCH="arm64"
 else
-  # Fallback to dpkg and then fix dependencies
-  sudo dpkg -i "${DEB_FILE}" || sudo apt-get install -f -y
-  # If dpkg failed, the above command should fix it. Retry for certainty.
-  if ! dpkg -l | grep -q rstudio; then
-      sudo dpkg -i "${DEB_FILE}"
-  fi
-fi
-if [ $? -ne 0 ]; then
-  echo "RStudio installation failed."
-  exit 1
+    echo "Error: Unsupported architecture for RStudio: $ARCH" >&2
+    exit 1
 fi
 
-# --- Cleanup ---
-rm -f "${DEB_FILE}"
+# --- Rocker Compatibility Shims ---
+# RStudio Server for noble (24.04) uses the jammy (22.04) packages.
+if [ "$UBUNTU_CODENAME" = "noble" ]; then
+    echo "Info: Mapping 'noble' to 'jammy' for RStudio Server download."
+    UBUNTU_CODENAME="jammy"
+fi
 
-# --- Verify ---
-echo "Verifying RStudio installation..."
-if command_exists rstudio; then
-  echo "RStudio installed successfully."
+# Shim for older Ubuntu: map focal to bionic for specific version downloads
+if [ "$UBUNTU_CODENAME" = "focal" ]; then
+    UBUNTU_CODENAME="bionic"
+fi
+
+echo "Info: Downloading RStudio $RSTUDIO_VERSION for $UBUNTU_CODENAME ($RSTUDIO_ARCH)..."
+
+# --- FIXED URLS ---
+
+# Download logic for stable/preview/daily
+if [ "$RSTUDIO_VERSION" = "stable" ] || [ "$RSTUDIO_VERSION" = "preview" ] || [ "$RSTUDIO_VERSION" = "daily" ]; then
+    if [ "$UBUNTU_CODENAME" = "bionic" ]; then
+        UBUNTU_CODENAME="focal"
+    fi
+    wget "https://rstudio.org/download/latest/${RSTUDIO_VERSION}/server/${UBUNTU_CODENAME}/rstudio-server-latest-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE"
 else
-  echo "RStudio installation could not be verified."
-  exit 1
+    wget "https://download2.rstudio.org/server/${UBUNTU_CODENAME}/${RSTUDIO_ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE" ||
+        wget "https://s3.amazonaws.com/rstudio-ide-build/server/${UBUNTU_CODENAME}/${RSTUDIO_ARCH}/rstudio-server-${RSTUDIO_VERSION/"+"/"-"}-${RSTUDIO_ARCH}.deb" -O "$DOWNLOAD_FILE"
 fi
 
-echo "Script finished."
+# --- 4. Install ---
+echo "Info: Installing .deb package..."
+sudo gdebi --non-interactive "$DOWNLOAD_FILE"
+rm "$DOWNLOAD_FILE"
+
+# --- 5. Post-Install Configuration ---
+# (This section is unchanged)
+echo "Info: Configuring RStudio Server..."
+sudo ln -fs /usr/lib/rstudio-server/bin/rstudio-server /usr/local/bin
+sudo ln -fs /usr/lib/rstudio-server/bin/rserver /usr/local/bin
+sudo rm -f /var/lib/rstudio-server/secure-cookie-key
+sudo mkdir -p /etc/R
+R_BIN="$(which R)"
+echo "rsession-which-r=${R_BIN}" | sudo tee /etc/rstudio/rserver.conf > /dev/null
+echo "lock-type=advisory" | sudo tee /etc/rstudio/file-locks > /dev/null
+sudo cp /etc/rstudio/rserver.conf /etc/rstudio/disable_auth_rserver.conf
+echo "auth-none=1" | sudo tee -a /etc/rstudio/disable_auth_rserver.conf > /dev/null
+sudo mkdir -p /etc/rstudio/
+cat <<EOF | sudo tee /etc/rstudio/logging.conf > /dev/null
+[*]
+log-level=warn
+logger-type=syslog
+EOF
+if [ -n "$CUDA_HOME" ]; then
+    sed -i '/^rsession-ld-library-path/d' /etc/rstudio/rserver.conf
+    echo "rsession-ld-library-path=$LD_LIBRARY_PATH" | sudo tee -a /etc/rstudio/rserver.conf > /dev/null
+fi
+
+echo "Info: RStudio Server installation complete."
+echo "Run 'rserver' to start the server."
