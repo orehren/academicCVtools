@@ -83,37 +83,27 @@
 #' @importFrom rlang exec list2
 #' @importFrom cli cli_inform
 .load_sheets_data <- function(sheet_names_to_read, doc_identifier, ...) {
-
   cli::cli_inform("Starting data loading for {length(sheet_names_to_read)} sheet(s)...")
 
-  # Capture the dots arguments explicitly using rlang::list2
-  # list2 handles dots more robustly, especially regarding defaults
-  dot_args <- rlang::list2(...)
+  # Use purrr's formula syntax for a concise map.
+  # The dots (...) are passed down automatically by read_cv_sheet.
+  # We use purrr::partial to create a version of read_cv_sheet with
+  # the doc_identifier and any other ... args already filled in.
+  read_from_specific_doc <- purrr::partial(
+    read_cv_sheet,
+    doc_identifier = doc_identifier,
+    ...
+  )
 
-  loaded_data_list <- purrr::map(sheet_names_to_read, function(current_sheet_name) {
-
-    cli::cli_inform("--> Loading sheet {.val {current_sheet_name}}...")
-
-    # Prepare arguments for read_cv_sheet
-    # Start with fixed arguments
-    args_for_read <- list(
-      doc_identifier = doc_identifier,
-      sheet_name = current_sheet_name
-    )
-
-    # Add arguments from dots, potentially overriding defaults if present in dots
-    # Combine lists, arguments in dot_args take precedence
-    final_args <- c(args_for_read, dot_args)
-
-    # Call read_cv_sheet using do.call or rlang::exec with the explicit list
-    # do.call is often simpler here:
-    sheet_data <- do.call(read_cv_sheet, final_args)
-
-    # Alternative with rlang::exec:
-    # sheet_data <- rlang::exec("read_cv_sheet", !!!final_args)
-
-    return(sheet_data)
-  })
+  # Map over the sheet names, calling our partially-filled function for each.
+  # A progress bar can be added easily with purrr::map if needed.
+  loaded_data_list <- purrr::map(
+    sheet_names_to_read,
+    ~ {
+      cli::cli_inform("--> Loading sheet {.val {.x}}...")
+      read_from_specific_doc(sheet_name = .x)
+    }
+  )
 
   cli::cli_inform("...Data loading finished.")
   return(loaded_data_list)

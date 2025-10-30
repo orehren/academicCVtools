@@ -162,21 +162,29 @@ read_cv_sheet <- function(doc_identifier,
                           col_types = NULL,
                           trim_ws = TRUE) {
   # Phase 0: Validate Arguments (Aborts on failure)
-  .validate_read_cv_sheet_args(doc_identifier, sheet_name, na_strings, col_types, trim_ws)
+  .validate_read_cv_sheet_args(
+    doc_identifier, sheet_name, na_strings, col_types, trim_ws
+  )
 
   # Phase 1: Resolve Identifier (Aborts on failure)
   ss_input <- .resolve_doc_identifier(doc_identifier)
 
   # Phase 2: Check Sheet Existence (Aborts if sheet definitely not found)
-  doc_id_for_msg <- tryCatch(googledrive::as_id(ss_input), error = function(e) "UNKNOWN_ID")
   .check_sheet_existence(ss_input, sheet_name)
 
-  # Phase 3: Read Data (Aborts on failure)
-  sheet_data <- .read_sheet_data(ss_input, sheet_name, na_strings, col_types, trim_ws)
+  # Phase 3: Read Data (Aborts on failure from googlesheets4)
+  sheet_data <- .read_sheet_data(
+    ss_input, sheet_name, na_strings, col_types, trim_ws
+  )
 
-  # Phase 4: Post-Read Checks (Issues warning if empty)
+  # Phase 3: Post-Read Checks (Issues warning if empty)
+  # Resolve doc ID for messaging now, only if needed.
+  doc_id_for_msg <- tryCatch(
+    googledrive::as_id(ss_input),
+    error = function(e) "UNKNOWN_ID"
+  )
   sheet_data <- .check_read_result(sheet_data, sheet_name, doc_id_for_msg)
 
-  # Phase 5: Return Data
+  # Phase 4: Return Data
   return(sheet_data)
 }

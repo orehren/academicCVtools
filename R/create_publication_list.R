@@ -12,85 +12,31 @@
 #' 1.  **Argument Validation:** Ensures all inputs are correct and files exist.
 #' 2.  **Pandoc Execution:** Calls Pandoc with `citeproc` to convert the `.bib`
 #'     file into a structured JSON output.
-#' 3.  **JSON Parsing & Validation:** Parses the JSON and validates its structure.
-#' 4.  **Data Extraction:** Extracts metadata (e.g., citation key, year) and the
-#'     formatted citation strings from the JSON.
-#' 5.  **Processing:** Joins the metadata and formatted strings, assigns group
-#'     labels (e.g., "Journal Article"), and highlights the specified author's name.
-#' 6.  **Sorting:** Sorts the publications by group and then by year (descending).
-#' 7.  **Typst Output:** Generates the final Typst code block, which calls a
-#'     Typst function with the processed data.
+#' 3.  **JSON Parsing & Transformation:** Parses the JSON and transforms it into a
+#'     clean data frame. This includes handling empty/invalid inputs, extracting
+#'     metadata, formatting citation strings, grouping, and author highlighting.
+#' 4.  **Typst Output Generation:** Generates the final Typst code block.
 #'
 #' @param bib_file Path to the `.bib` bibliography file.
 #' @param author_name The full name of the author to highlight in publications.
 #' @param csl_file Path to the `.csl` citation style file for formatting.
 #' @param group_labels A named character vector to map BibTeX entry types
 #'   (e.g., `article`) to user-friendly display labels (e.g., `"Journal Article"`).
-#'   Defaults to a standard set of academic publication types.
 #' @param default_label The display label for any entry types not found in
-#'   `group_labels`. Defaults to `"Other"`.
+#'   `group_labels`.
 #' @param group_order An optional character vector specifying the desired
-#'   display order of the `group_labels`. If `NULL`, groups are sorted
-#'   alphabetically.
+#'   display order of the `group_labels`.
 #' @param author_highlight_markup The Typst markup to apply for highlighting the
-#'   author. Must contain a `%s` placeholder for the author's name.
-#'   Defaults to `"#strong[%s]"`, which makes the name bold.
+#'   author.
 #' @param typst_func_name The name of the Typst function that will receive the
-#'   publication data. Defaults to `"publication-list"`.
-#' @param pandoc_path An optional path to the Pandoc executable. If `NULL`,
-#'   Pandoc is assumed to be in the system's PATH.
+#'   publication data.
+#' @param pandoc_path An optional path to the Pandoc executable.
 #'
 #' @return A single character string containing a Typst code block (` ```{=typst} ... ``` `).
 #'   If no valid publication entries are found, it returns an empty Typst array block.
 #'   This output is intended to be used in a Quarto document with `output: asis`.
 #'
 #' @export
-#'
-#' @examples
-#' \dontrun{
-#' # --- Setup: Create dummy files for a reproducible example ---
-#' bib_content <- c(
-#'   "@article{Author2023, author={Jane Doe}, title={A great paper}, year={2023}}",
-#'   "@inproceedings{Author2022, author={Jane Doe}, title={A conference talk}, year={2022}}"
-#' )
-#' bib_file <- tempfile(fileext = ".bib")
-#' writeLines(bib_content, bib_file)
-#'
-#' csl_content <- '<?xml version="1.0" encoding="utf-8"?>
-#' <style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
-#'   <info><title>Simple CSL</title><id>simple-csl</id></info>
-#'   <bibliography><layout><text variable="title"/></layout></bibliography>
-#' </style>'
-#' csl_file <- tempfile(fileext = ".csl")
-#' writeLines(csl_content, csl_file)
-#'
-#' # --- Basic Usage ---
-#' # This generates a Typst block with two publications, highlighting "Jane Doe".
-#' typst_output <- create_publication_list(
-#'   bib_file = bib_file,
-#'   author_name = "Jane Doe",
-#'   csl_file = csl_file
-#' )
-#' cat(typst_output)
-#'
-#' # --- Custom Grouping and Order ---
-#' custom_labels <- c(article = "Peer-Reviewed Papers", inproceedings = "Talks")
-#' custom_order <- c("Peer-Reviewed Papers", "Talks")
-#'
-#' typst_output_custom <- create_publication_list(
-#'   bib_file = bib_file,
-#'   author_name = "Jane Doe",
-#'   csl_file = csl_file,
-#'   group_labels = custom_labels,
-#'   group_order = custom_order,
-#'   author_highlight_markup = "#emph[%s]" # Italicize the author
-#' )
-#' cat(typst_output_custom)
-#'
-#' # --- Cleanup ---
-#' unlink(bib_file)
-#' unlink(csl_file)
-#' }
 create_publication_list <- function(
     bib_file,
     author_name,
@@ -106,112 +52,104 @@ create_publication_list <- function(
     pandoc_path = NULL,
     author_highlight_markup = "#strong[%s]",
     typst_func_name = "publication-list"
-  ) {
-  # ============================================================================
-  # Phase 0: Validate Arguments
-  # ============================================================================
-  # Call the dedicated validation function (defined in validation_helpers.R)
-  # It uses checkmate::assert_* and aborts on failure.
+) {
+  # --- Phase 0: Validate Arguments ---
   .validate_create_publication_list_args(
     bib_file, author_name, csl_file, group_labels, default_label,
     group_order, pandoc_path, author_highlight_markup, typst_func_name
   )
 
-  # ============================================================================
-  # Phase 1: Input Modification & Setup
-  # ============================================================================
-  # Handle duplicates in group_order (safe now after validation)
-  if (!is.null(group_order) && anyDuplicated(group_order)) {
-    # Warning removed as assert_character(unique=TRUE) should handle this
-    group_order <- unique(group_order)
-  }
-  # Validate/find pandoc executable (safe now after validation)
+  # --- Phase 1: Setup ---
   pandoc_cmd <- .validate_executable_found("pandoc", pandoc_path, "pandoc_path")
   empty_result_string <- sprintf("```{=typst}\n#%s(())\n```", typst_func_name)
 
-  # ============================================================================
-  # Phase 2: Call Pandoc
-  # ============================================================================
-  cli::cli_inform("Running Pandoc to format bibliography as JSON...")
+  # --- Phase 2: Call Pandoc ---
   pandoc_json_output <- .call_pandoc_json(bib_file, csl_file, pandoc_cmd)
-  if (is.null(pandoc_json_output)) {
-    return(empty_result_string)
-  }
+  if (is.null(pandoc_json_output)) return(empty_result_string)
 
-  # ============================================================================
-  # Phase 3: Parse JSON
-  # ============================================================================
+  # --- Phase 3: Parse and Transform Data ---
   parsed_data <- tryCatch(
-    {
-      jsonlite::fromJSON(pandoc_json_output, simplifyVector = FALSE)
-    },
+    jsonlite::fromJSON(pandoc_json_output, simplifyVector = FALSE),
     error = function(e) {
-      cli::cli_abort("Failed to parse Pandoc JSON output.", parent = e, call. = FALSE)
+      cli::cli_abort("Failed to parse Pandoc JSON output.", parent = e)
     }
   )
 
-  # ============================================================================
-  # Phase 4: Validate JSON Structure
-  # ============================================================================
-  validation_result <- .check_pandoc_json_structure(parsed_data) # Assumes helper exists
-  if (!isTRUE(validation_result)) {
-    cli::cli_warn(validation_result)
-    return(empty_result_string)
-  }
-  references_meta_list_c <- parsed_data$meta$references$c
-  if (length(references_meta_list_c) == 0) {
-    cli::cli_warn("No references found in the Pandoc JSON output (meta$references$c is empty).")
+  references <- purrr::pluck(parsed_data, "meta", "references", "c")
+  blocks <- purrr::pluck(parsed_data, "blocks", 1) # Note the change here
+
+  if (is.null(references) || is.null(blocks) || length(references) == 0) {
+    cli::cli_warn("Pandoc JSON is missing data or contains no references.")
     return(empty_result_string)
   }
 
-  # ============================================================================
-  # Phase 5: Extract Data
-  # ============================================================================
-  metadata_df <- .extract_metadata_from_json(references_meta_list_c)
-  formatted_df <- .extract_formatted_strings_from_json(parsed_data$blocks)
+  metadata_df <- purrr::map_dfr(references, function(x) {
+    tibble::tibble(
+      key = purrr::pluck(x, "c", "id", "c", 1, .default = NA_character_),
+      bibtype = purrr::pluck(x, "c", "type", "c", 1, .default = "misc"),
+      year = purrr::pluck(x, "c", "issued", "c", 1, .default = NA_character_) %>%
+        stringr::str_extract("\\d{4}") %>%
+        as.integer()
+    )
+  }) %>%
+    dplyr::mutate(
+      bibtype = dplyr::recode(
+        .data$bibtype,
+        "article-journal" = "article",
+        "paper-conference" = "inproceedings",
+        "chapter" = "incollection",
+        "thesis" = "phdthesis",
+        "report" = "techreport",
+        "manuscript" = "unpublished",
+        .default = .data$bibtype
+      )
+    )
 
-  if (nrow(metadata_df) == 0) {
-    cli::cli_warn("Failed to extract any valid metadata.")
-    return(empty_result_string)
+  formatted_strings_df <- .extract_formatted_strings_from_ast(blocks)
+
+  publication_data <- metadata_df %>%
+    dplyr::left_join(formatted_strings_df, by = "key") %>%
+    dplyr::filter(!is.na(.data$formatted_string), nzchar(.data$formatted_string)) %>%
+    dplyr::mutate(
+      label = dplyr::recode(.data$bibtype, !!!group_labels, .default = default_label),
+      formatted_string = stringr::str_replace_all(
+        .data$formatted_string,
+        pattern = stringr::fixed(author_name),
+        replacement = sprintf(author_highlight_markup, author_name)
+      )
+    )
+
+  # --- Phase 4: Sort Data ---
+  if (!is.null(group_order)) {
+    publication_data <- publication_data %>%
+      dplyr::mutate(label = factor(.data$label, levels = intersect(group_order, unique(.data$label))))
   }
-  if (nrow(formatted_df) == 0) {
-    cli::cli_warn("Could not extract any formatted citation strings from Pandoc JSON 'blocks'.")
-    return(empty_result_string)
-  }
+  publication_data <- publication_data %>%
+    dplyr::arrange(.data$label, dplyr::desc(.data$year))
 
-  # ============================================================================
-  # Phase 6: Combine, Label, Highlight (using Helper)
-  # ============================================================================
-  combined_data <- .process_combined_pub_data(
-    metadata_df = metadata_df,
-    formatted_df = formatted_df,
-    group_labels = group_labels,
-    default_label = default_label,
-    author_name = author_name,
-    author_highlight_markup = author_highlight_markup
-  )
+  # --- Phase 5: Generate Typst Output ---
+  .create_typst_output_block(publication_data, typst_func_name)
+}
 
-  # Add Guard Clause here based on the result of the helper
-  if (nrow(combined_data) == 0) {
-    # Warning was already issued inside the helper
-    return(empty_result_string)
-  }
+#' Generate the final Typst output block for the publication list
+#'
+#' @param combined_data_sorted The final, sorted tibble.
+#' @param typst_func_name The name of the Typst function.
+#'
+#' @return A single character string containing the Typst code block.
+#' @noRd
+.create_typst_output_block <- function(combined_data_sorted, typst_func_name) {
+  empty_result_string <- sprintf("```{=typst}\n#%s(())\n```", typst_func_name)
+  if (nrow(combined_data_sorted) == 0) return(empty_result_string)
 
-  # ============================================================================
-  # Phase 7: Sort Data
-  # ============================================================================
-  combined_data_sorted <- .sort_publication_data(
-    combined_data = combined_data,
-    group_order = group_order
-  )
+  typst_entry_strings <- purrr::map_chr(1:nrow(combined_data_sorted), ~ {
+    current_entry <- combined_data_sorted[.x, ]
+    escaped_label <- .escape_typst_string(as.character(current_entry$label)) # Ensure character
+    item_for_r_string <- gsub("\\", "\\\\", current_entry$formatted_string, fixed = TRUE)
+    item_for_r_string <- gsub('"', '\\"', item_for_r_string, fixed = TRUE)
+    sprintf('  (label: "%s", item: "%s")', escaped_label, item_for_r_string)
+  })
 
-  # ============================================================================
-  # Phase 8: Generate Typst Output String
-  # ============================================================================
-  final_typst_block <- .create_typst_output_block(
-    combined_data_sorted = combined_data_sorted,
-    typst_func_name = typst_func_name
-  )
-
-  return(final_typst_block)
+  typst_body <- paste(typst_entry_strings, collapse = ",\n")
+  sprintf("```{=typst}\n#%s((\n%s\n))\n```", typst_func_name, typst_body)
 }

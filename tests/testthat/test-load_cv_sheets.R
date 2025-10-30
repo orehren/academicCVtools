@@ -23,7 +23,7 @@ test_that("load_cv_sheets works with a named list and returns correctly named li
   expected_unnamed_list <- list(mock_data_sheet1, mock_data_sheet2)
 
   # 2. Mocks
-  stub(load_cv_sheets, ".resolve_identifier_as_name", function(doc_identifier) doc_identifier)
+  stub(load_cv_sheets, ".resolve_doc_identifier", function(doc_identifier) doc_identifier)
   mock_loader <- mockery::mock(expected_unnamed_list)
   stub(load_cv_sheets, ".load_sheets_data", mock_loader)
   stub(load_cv_sheets, ".validate_load_cv_sheets_args", TRUE)
@@ -57,7 +57,7 @@ test_that("load_cv_sheets works with unnamed vector and uses janitor names", {
   expected_names <- c("sheet_one", "sheet_two")
 
   # 2. Mocks
-  stub(load_cv_sheets, ".resolve_identifier_as_name", function(doc_identifier) doc_identifier)
+  stub(load_cv_sheets, ".resolve_doc_identifier", function(doc_identifier) doc_identifier)
   mock_loader <- mockery::mock(expected_unnamed_list)
   stub(load_cv_sheets, ".load_sheets_data", mock_loader)
   stub(load_cv_sheets, ".validate_load_cv_sheets_args", TRUE)
@@ -81,48 +81,46 @@ test_that("load_cv_sheets works with unnamed vector and uses janitor names", {
   mockery::expect_called(mock_loader, 1)
 })
 
-# --- Test Block 3: Weitergabe von ... Argumenten ---
-test_that("load_cv_sheets passes ... arguments correctly to the loader", {
-
+# --- Test Block 3: Passing of ... arguments ---
+test_that("load_cv_sheets passes ... arguments down to read_cv_sheet", {
   # 1. Inputs
   doc_id <- "test_doc_id_3"
   sheets_config <- list("Sheet1" = "s1")
-  extra_arg_val <- "specific_na"
+  extra_arg_val <- "specific_na_string"
 
   # 2. Mocks
-  mock_recorder <- mockery::mock()
-  stub_return_func <- function(sheet_names_to_read, doc_identifier, ...) {
-    mock_recorder(sheet_names_to_read = sheet_names_to_read,
-                  doc_identifier = doc_identifier,
-                  ...)
-    return(vector("list", length(sheet_names_to_read)))
-  }
-  stub(load_cv_sheets, ".resolve_identifier_as_name", function(doc_identifier) doc_identifier)
-  stub(load_cv_sheets, ".load_sheets_data", stub_return_func)
-  stub(load_cv_sheets, ".validate_load_cv_sheets_args", TRUE)
-  stub(load_cv_sheets, ".prepare_sheet_load_config",
-                list(sheet_names_to_read = c("Sheet1"), target_list_names = c("s1")))
+  mock_read_sheet <- mockery::mock(dplyr::tibble(a = 1), cycle = TRUE)
 
-  # 3. Call
-  result_list_corrected <- load_cv_sheets(
-    doc_identifier = doc_id,
-    sheets_to_load = sheets_config,
-    na_strings = extra_arg_val
+  # 3. Call within mocked environment
+  testthat::with_mocked_bindings(
+    {
+      result <- load_cv_sheets(
+        doc_identifier = doc_id,
+        sheets_to_load = sheets_config,
+        na = extra_arg_val # Argument for read_sheet
+      )
+    },
+    # Define mocks for functions in the academicCVtools namespace
+    .package = "academicCVtools",
+    read_cv_sheet = mock_read_sheet,
+    .resolve_doc_identifier = function(id) id,
+    .validate_load_cv_sheets_args = function(...) TRUE,
+    .prepare_sheet_load_config = function(...) {
+      list(sheet_names_to_read = c("Sheet1"), target_list_names = c("s1"))
+    }
   )
 
   # 4. Assertions
-  mockery::expect_called(mock_recorder, 1)
-  call_args <- mockery::mock_args(mock_recorder)[[1]]
+  mockery::expect_called(mock_read_sheet, 1)
+  call_args <- mockery::mock_args(mock_read_sheet)[[1]]
 
   expect_equal(call_args$doc_identifier, doc_id)
-  expect_equal(call_args$sheet_names_to_read, c("Sheet1"))
-  expect_true("na_strings" %in% names(call_args))
-  expect_equal(call_args$na_strings, extra_arg_val)
-
-  expect_type(result_list_corrected, "list")
-  expect_named(result_list_corrected, "s1")
-  expect_equal(length(result_list_corrected), 1)
-  expect_null(result_list_corrected$s1)
+  expect_equal(call_args$sheet_name, "Sheet1")
+  expect_true("na" %in% names(call_args))
+  expect_equal(call_args$na, extra_arg_val)
+  expect_type(result, "list")
+  expect_named(result, "s1")
+  expect_equal(nrow(result$s1), 1)
 })
 
 # --- Test Block 4: Error in validation ---

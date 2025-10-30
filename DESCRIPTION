@@ -25,6 +25,7 @@ Imports:
     googledrive,
     googlesheets4 (>= 1.1.0),
     purrr,
+    processx,
     rlang,
     stringr,
     tidyr,

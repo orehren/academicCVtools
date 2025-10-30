@@ -17,157 +17,30 @@ format_typst_section(
 )
 }
 \arguments{
-\item{data}{A data frame or tibble where each row is a CV entry and columns
-are fields. Typically the output of \code{read_cv_sheet} or an element
-from the list returned by \code{load_cv_sheets}. Must not be \code{NULL}.}
+\item{data}{A data frame or tibble where each row is a CV entry.}
 
-\item{typst_func}{The name of the Typst function to call for each entry
-(row). Must be a single string starting with \verb{#}, e.g., \code{"#cvEntry"}.}
+\item{typst_func}{The name of the Typst function to call for each entry.}
 
-\item{combine_cols}{Optional: A vector of column names or a tidyselect
-expression (e.g., \code{c(detail_1, detail_2)} or \code{starts_with("detail")})
-specifying columns to combine into a single field. Defaults to \code{NULL}
-(no combination).}
+\item{combine_cols}{Tidyselect expression for columns to combine.}
 
-\item{combine_as}{Character string: The name of the new field in the Typst
-dictionary that will contain the combined values. Defaults to \code{"details"}.
-Must be a single, non-empty string.}
+\item{combine_as}{Name of the new combined column.}
 
-\item{combine_sep}{Character string: The separator used when joining the
-values from \code{combine_cols}. Defaults to \code{"\\\\ "} (newline). Can be empty.}
+\item{combine_sep}{Separator for combined columns.}
 
-\item{combine_prefix}{Character string: A prefix added to each non-NA value
-before joining. Defaults to \code{"- "}. Can be empty.}
+\item{combine_prefix}{Prefix for combined column values.}
 
-\item{exclude_cols}{Optional: A vector of column names or a tidyselect
-expression specifying columns to exclude from the Typst output.
-Defaults to \code{NULL} (no exclusion). Columns listed in \code{combine_cols}
-are automatically excluded from the main output dictionary.}
+\item{exclude_cols}{Tidyselect expression for columns to exclude.}
 
-\item{na_action}{Character string: How to handle \code{NA} values in columns \emph{not}
-involved in \code{combine_cols}. Must be one of \code{"omit"}, \code{"keep"}, or \code{"string"}.
-- \code{"omit"} (default): Key-value pairs with \code{NA} values are omitted.
-- \code{"keep"}: \code{NA} values are converted to Typst's \code{none} literal.
-- \code{"string"}: \code{NA} values are converted to the string \code{"NA"}.}
+\item{na_action}{How to handle \code{NA} values: "omit", "keep", or "string".}
 
-\item{output_mode}{Character string: Defines the output structure.
-Must be one of \code{"rowwise"} (default) or \code{"array"}.
-- \code{"rowwise"}: Generates a separate Typst function call for each row.
-- \code{"array"}: Generates a single Typst function call passing an array
-of all row dictionaries.}
+\item{output_mode}{Output structure: "rowwise" or "array".}
 }
 \value{
-A single character string containing Typst code. This string consists
-of multiple Typst function calls (one per row of \code{data}), wrapped
-in a \verb{\{typst\} ... } block. Returns an empty Typst block
-\code{"```{typst}\\n```"} if the input data frame has zero rows after
-validation. Throws an error if arguments are invalid.
+A single character string containing Typst code.
 }
 \description{
 Takes a data frame (tibble) representing a CV section and formats it into
 a single string suitable for Typst. Each row of the data frame is converted
 into a Typst function call. Columns can be combined or excluded using
-tidyselect syntax. Argument validation is performed using assertions from
-the \code{checkmate} package via an internal helper function.
-}
-\examples{
-\dontrun{
-# --- Setup: Create example data ---
-example_data <- dplyr::tibble(
-  Date = c("2023-01-01", "2022-05-15", "2021-11-30"),
-  Title = c("Project Alpha", "Research Grant", "Initial Concept"),
-  Location = c("Lab A", "University X", "Office B"),
-  Description = c("Developed core module.", "Secured funding.", "Drafted proposal."),
-  Detail_A = c("Used R and Python", "Wrote application", "Market research"),
-  Detail_B = c("Met all deadlines", NA, "Competitor analysis"),
-  Status = c("Completed", "Ongoing", "Completed"),
-  Notes = c("Successful deployment", "Reporting due Q4", NA)
-)
-
-# Load the package if not already loaded
-# library(academicCVtools)
-# Or use devtools::load_all() during development
-
-# --- Example 1: Basic usage ---
-# All columns used, NA omitted (default)
-cat(format_typst_section(example_data, typst_func = "#basicEntry"))
-
-# --- Example 2: Combining detail columns ---
-# Combine Detail_A and Detail_B into "key_points"
-cat(format_typst_section(
-  data = example_data,
-  typst_func = "#projectEntry",
-  combine_cols = c(Detail_A, Detail_B), # Tidyselect: Explicit names
-  combine_as = "key_points",
-  combine_prefix = "* "
-))
-
-# --- Example 3: Combining with starts_with ---
-# Combine all columns starting with "Detail_"
-cat(format_typst_section(
-  data = example_data,
-  typst_func = "#projectEntry",
-  combine_cols = starts_with("Detail_"), # Tidyselect: Helper function
-  combine_as = "details_combined",
-  combine_prefix = "- "
-))
-
-# --- Example 4: Excluding columns ---
-# Exclude 'Status' and 'Notes'
-cat(format_typst_section(
-  data = example_data,
-  typst_func = "#simpleEntry",
-  exclude_cols = c(Status, Notes) # Tidyselect: Explicit names
-))
-
-# --- Example 5: Combining AND Excluding ---
-# Combine details, exclude Location, Status, and Notes
-cat(format_typst_section(
-  data = example_data,
-  typst_func = "#focusedEntry",
-  combine_cols = starts_with("Detail_"),
-  combine_as = "key_details",
-  exclude_cols = c(Location, Status, Notes)
-))
-
-# --- Example 6: Handling NA as 'none' ---
-cat(format_typst_section(
-  data = example_data,
-  typst_func = "#entryWithNone",
-  na_action = "keep"
-))
-
-# --- Example 7: Handling NA as string "NA" ---
-cat(format_typst_section(
-  data = example_data,
-  typst_func = "#entryWithStringNA",
-  na_action = "string"
-))
-
-# --- Example 8: Empty Input Data ---
-# Should return empty Typst block without warning (checked in validator)
-cat(format_typst_section(
-  data = example_data[0, ], # Empty data frame
-  typst_func = "#emptyEntry"
-))
-
-# --- Example 9: Invalid Tidyselect (should error via helper) ---
-tryCatch(
-  format_typst_section(
-    data = example_data,
-    typst_func = "#errorEntry",
-    exclude_cols = c(Status, NonExistentCol)
-  ),
-  error = function(e) print(paste("Successfully caught expected error:", e$message))
-)
-
-# --- Example 10: Invalid Argument (should error via checkmate) ---
-tryCatch(
-  format_typst_section(
-    data = example_data,
-    typst_func = "NotStartingWithHash" # Invalid typst_func
-  ),
-  error = function(e) print(paste("Successfully caught expected error:", e$message))
-)
-}
+tidyselect syntax.
 }

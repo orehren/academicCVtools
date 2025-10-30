@@ -8,21 +8,10 @@
 #' @importFrom googlesheets4 as_sheets_id
 #' @importFrom cli cli_abort cli_inform
 .resolve_identifier_as_url <- function(doc_identifier) {
-  resolved_id <- tryCatch(
-    {
-      # as_sheets_id should handle URL parsing and validation
-      googlesheets4::as_sheets_id(doc_identifier)
-    },
-    error = function(e) {
-      # If as_sheets_id fails specifically for a URL-like string, abort.
-      cli::cli_abort(
-        "Failed to interpret {.val {doc_identifier}} as a valid Google Sheet URL.",
-        parent = e, call. = FALSE
-      )
-    }
-  )
+  # Let as_sheets_id handle URL parsing and validation directly.
+  # It provides a clear error message on failure.
+  resolved_id <- googlesheets4::as_sheets_id(doc_identifier)
 
-  # If tryCatch didn't abort, as_sheets_id succeeded
   cli::cli_inform("Interpreted identifier as URL, extracted ID: {resolved_id}")
   return(resolved_id)
 }
@@ -61,24 +50,13 @@
 .resolve_identifier_as_name <- function(doc_identifier) {
   cli::cli_inform("Interpreting identifier as a name, searching Google Drive for: {.val {doc_identifier}}")
 
-  # Perform search
-  found_files_dribble <- tryCatch(
-    {
-      googledrive::drive_find(
-        # Use single quotes around name in query, escape internal single quotes
-        q = sprintf(
-          "name = '%s' and mimeType = 'application/vnd.google-apps.spreadsheet'",
-          gsub("'", "\\\\'", doc_identifier)
-        ),
-        n_max = 2 # Only need to find 0, 1, or >1
-      )
-    },
-    error = function(e) {
-      cli::cli_abort(
-        "Failed to search Google Drive for document name {.val {doc_identifier}}.",
-        parent = e, call. = FALSE
-      )
-    }
+  # Perform search directly. drive_find provides informative errors.
+  found_files_dribble <- googledrive::drive_find(
+    q = sprintf(
+      "name = '%s' and mimeType = 'application/vnd.google-apps.spreadsheet'",
+      gsub("'", "\\\\'", doc_identifier)
+    ),
+    n_max = 2 # Find 0, 1, or >1
   )
 
   # --- Check search results using Guard Clauses ---
@@ -146,108 +124,41 @@
 #' @importFrom googlesheets4 gs4_get
 #' @importFrom googledrive as_id
 #' @importFrom cli cli_abort cli_warn cli_inform
-#' @importFrom utils packageVersion head
-#' @importFrom rlang is_list
-.check_sheet_existence <- function(ss_input, sheet_name) {
-  ss_metadata <- NULL
-  doc_id_for_msg <- tryCatch(googledrive::as_id(ss_input), error = function(e) "INVALID_ID")
-
-  ss_metadata <- tryCatch(
-    {
-      googlesheets4::gs4_get(ss_input, .quiet = TRUE)
-    },
-    error = function(e) {
-      NULL
-    }
-  )
-
-  # Guard Clause 1: Metadata retrieval failed
-  if (is.null(ss_metadata)) {
-    cli::cli_inform("Could not retrieve metadata for document (ID: {.val {doc_id_for_msg}}). Proceeding to read attempt.")
-    return(invisible(TRUE)) # Allow read attempt to handle the error
-  }
-
-  # Guard Clause 2: Metadata structure invalid
-  sheets_info <- ss_metadata$sheets
-  is_valid_sheets_structure <- !is.null(sheets_info) &&
-    is.data.frame(sheets_info) &&
-    "name" %in% names(sheets_info)
-
-  if (!is_valid_sheets_structure) {
-    cli::cli_warn("Could not retrieve valid sheet names from document metadata (ID: {.val {doc_id_for_msg}}).")
-    return(invisible(TRUE)) # Allow read attempt
-  }
-
-  # Guard Clause 3: Sheet name not found
-  sheet_names_in_doc <- sheets_info$name
-  if (!sheet_name %in% sheet_names_in_doc) {
-    #available_sheets_msg <- .create_available_sheets_message(sheet_names_in_doc) # Assumes helper exists
-    max_sheets_to_show <- 10
-    available_sheets_msg <- if (length(sheet_names_in_doc) > max_sheets_to_show) {
-      paste(paste(utils::head(sheet_names_in_doc, max_sheets_to_show), collapse = ", "), "...")
-    } else {
-      paste(sheet_names_in_doc, collapse = ", ")
-    }
-    # Fallback falls Liste leer war
-    if (nchar(available_sheets_msg) == 0) available_sheets_msg <- "(No sheets found or list empty)"
-    cli::cli_abort(
-      c("Sheet named {.val {sheet_name}} not found in document (ID: {.val {doc_id_for_msg}}).",
-        "i" = "Available sheets: {.val {available_sheets_msg}}."
-      ),
-      call. = FALSE
-    )
-  }
-
-  # If all guards passed, sheet exists
-  return(invisible(TRUE))
-}
-
-
-#' Read data from the specified sheet using googlesheets4
-#' @param ss_input Resolved gs4 identifier (ID string, URL string, or dribble).
-#' @param sheet_name The name of the sheet to read.
-#' @param na_strings Vector of strings to treat as NA.
-#' @param col_types Column type specification.
-#' @param trim_ws Logical, trim whitespace?
-#' @return A tibble with the sheet data. Aborts on read error.
-#' @noRd
 #' @importFrom googlesheets4 read_sheet
 #' @importFrom googledrive as_id
 #' @importFrom cli cli_abort
-.read_sheet_data <- function(ss_input, sheet_name, na_strings, col_types, trim_ws) {
-  doc_id_for_msg <- tryCatch(googledrive::as_id(ss_input), error = function(e) "UNKNOWN_ID")
-
-  sheet_data <- tryCatch(
-    {
-      googlesheets4::read_sheet(
-        ss = ss_input,
-        sheet = sheet_name,
-        na = na_strings,
-        col_types = col_types,
-        trim_ws = trim_ws,
-        .name_repair = "minimal"
-      )
-    },
-    error = function(e) {
-      cli::cli_abort(
-        c("Failed to read sheet {.val {sheet_name}} from document (ID: {.val {doc_id_for_msg}}).",
-          "i" = "Check sheet name, network connection, permissions.",
-          "x" = "Original error: {conditionMessage(e)}"
-        ),
-        call. = FALSE
-      )
-    }
+.check_sheet_existence <- function(ss_input, sheet_name) {
+  ss_metadata <- tryCatch(
+    googlesheets4::gs4_get(ss_input, .quiet = TRUE),
+    error = function(e) NULL
   )
 
-  # Check for NULL result (should be caught by tryCatch, but as safety)
-  if (is.null(sheet_data)) {
+  if (is.null(ss_metadata)) {
+    cli::cli_inform("Could not retrieve metadata for document. Proceeding to read attempt.")
+    return(invisible(TRUE))
+  }
+
+  if (!sheet_name %in% ss_metadata$sheets$name) {
     cli::cli_abort(
-      "Read attempt returned NULL unexpectedly for sheet {.val {sheet_name}} (ID: {.val {doc_id_for_msg}}).",
-      call. = FALSE
+      c("Sheet named {.val {sheet_name}} not found in document.",
+        "i" = "Available sheets: {.val {ss_metadata$sheets$name}}."
+      )
     )
   }
 
-  return(sheet_data)
+  invisible(TRUE)
+}
+
+.read_sheet_data <- function(ss_input, sheet_name, na_strings, col_types, trim_ws) {
+  # Let googlesheets4 handle errors directly for better user feedback.
+  googlesheets4::read_sheet(
+    ss = ss_input,
+    sheet = sheet_name,
+    na = na_strings,
+    col_types = col_types,
+    trim_ws = trim_ws,
+    .name_repair = "minimal"
+  )
 }
 
 
