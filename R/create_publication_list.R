@@ -1,42 +1,133 @@
 # R/create_publication_list.R
 
-#' Create a formatted publication list for Typst from a .bib file
+#' Create a Formatted Publication List for Typst
 #'
-#' This function provides a comprehensive workflow for generating a publication
-#' list suitable for an academic CV in Typst. It reads a bibliography file,
-#' processes it using Pandoc and a CSL stylesheet, and then groups, sorts, and
-#' formats the entries into a Typst-ready code block.
+#' Converts a `.bib` file into a Typst-ready string, perfect for an academic CV.
 #'
 #' @details
-#' The process follows these key steps:
-#' 1.  **Argument Validation:** Ensures all inputs are correct and files exist.
-#' 2.  **Pandoc Execution:** Calls Pandoc with `citeproc` to convert the `.bib`
-#'     file into a structured JSON output.
-#' 3.  **JSON Parsing & Transformation:** Parses the JSON and transforms it into a
-#'     clean data frame. This includes handling empty/invalid inputs, extracting
-#'     metadata, formatting citation strings, grouping, and author highlighting.
-#' 4.  **Typst Output Generation:** Generates the final Typst code block.
+#' This function automates the process of creating a clean, grouped, and sorted
+#' publication list for use in Typst and Quarto documents. It's designed for
+#' academics who want a reproducible, data-driven CV.
 #'
-#' @param bib_file Path to the `.bib` bibliography file.
-#' @param author_name The full name of the author to highlight in publications.
-#' @param csl_file Path to the `.csl` citation style file for formatting.
-#' @param group_labels A named character vector to map BibTeX entry types
-#'   (e.g., `article`) to user-friendly display labels (e.g., `"Journal Article"`).
-#' @param default_label The display label for any entry types not found in
-#'   `group_labels`.
-#' @param group_order An optional character vector specifying the desired
-#'   display order of the `group_labels`.
-#' @param author_highlight_markup The Typst markup to apply for highlighting the
-#'   author.
-#' @param typst_func_name The name of the Typst function that will receive the
-#'   publication data.
-#' @param pandoc_path An optional path to the Pandoc executable.
+#' Here's how it works:
+#' 1.  **Reads Your Bibliography:** Takes your `.bib` file as input.
+#' 2.  **Formats with Pandoc:** Uses Pandoc and a CSL style file to format your
+#'     citations into a structured format (JSON).
+#' 3.  **Processes and Transforms:** Cleans up the data, groups your publications
+#'     (e.g., "Journal Article", "Book Chapter"), highlights your name, and
+#'     sorts everything by group and year.
+#' 4.  **Generates Typst Code:** Produces a clean Typst code block that calls a
+#'     Typst function with your publication data, ready to be included in your
+#'     CV.
+#'
+#' @param bib_file Path to your `.bib` bibliography file.
+#' @param author_name Your full name, exactly as you want it highlighted in the
+#'   publication list.
+#' @param csl_file Path to a `.csl` citation style file for formatting your
+#'   references.
+#' @param group_labels A named vector that maps the BibTeX entry types (like
+#'   `"article"` or `"inproceedings"`) to the friendly group titles you want in
+#'   your CV (like `"Journal Articles"` or `"Conference Papers"`).
+#' @param default_label The label to use for any publication type not listed in
+#'   `group_labels`. Defaults to `"Other"`.
+#' @param group_order A vector of the group titles from `group_labels` in the
+#'   exact order you want them to appear in your CV. Any groups not listed here
+#'   will be added at the end, sorted alphabetically.
+#' @param author_highlight_markup The Typst code used to highlight your name.
+#'   Use `%s` as a placeholder for the `author_name`. Defaults to `"#strong[%s]"`
+#'   (bold).
+#' @param typst_func_name The name of the Typst function that will display your
+#'   publication list. Defaults to `"publication-list"`.
+#' @param pandoc_path Optional: The full path to the Pandoc executable. If `NULL`
+#'   (the default), the function will automatically look for Pandoc in your
+#'   system's PATH.
 #'
 #' @return A single character string containing a Typst code block (` ```{=typst} ... ``` `).
 #'   If no valid publication entries are found, it returns an empty Typst array block.
 #'   This output is intended to be used in a Quarto document with `output: asis`.
 #'
 #' @export
+#'
+#' @examples
+#' # This function requires Pandoc to be installed and available in the system's PATH.
+#' # We will only run the example if Pandoc is found.
+#' if (academicCVtools:::.is_pandoc_available()) {
+#'
+#' # --- 1. Basic Example ---
+#' # Create dummy files for a reproducible example
+#' bib_content <- c(
+#'   "@article{Doe2023,
+#'     author  = {Jane Doe and John Smith},
+#'     title   = {A Brilliant Paper on R},
+#'     journal = {Journal of R Studies},
+#'     year    = {2023}
+#'   }",
+#'   "@inproceedings{Doe2022,
+#'     author  = {Jane Doe},
+#'     title   = {A Talk on Tidyverse},
+#'     booktitle = {Proceedings of the R Conference},
+#'     year    = {2022}
+#'   }"
+#' )
+#' bib_file <- tempfile(fileext = ".bib")
+#' writeLines(bib_content, bib_file)
+#'
+#' csl_content <- '<?xml version="1.0" encoding="utf-8"?>
+#' <style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
+#'   <info>
+#'     <title>Simple APA-like Style</title>
+#'     <id>simple-apa</id>
+#'   </info>
+#'   <bibliography>
+#'     <layout>
+#'       <text variable="author" suffix=". "/>
+#'       <text variable="title" text-case="title" suffix=". "/>
+#'       <text variable="container-title" font-style="italic" suffix=", "/>
+#'       <text variable="volume"/>
+#'       <text variable="page" prefix="(" suffix=")"/>
+#'       <text variable="issued" prefix=" (" suffix=")."/>
+#'     </layout>
+#'   </bibliography>
+#' </style>'
+#' csl_file <- tempfile(fileext = ".csl")
+#' writeLines(csl_content, csl_file)
+#'
+#' # Generate the Typst output, highlighting "Jane Doe"
+#' typst_output <- create_publication_list(
+#'   bib_file = bib_file,
+#'   author_name = "Jane Doe",
+#'   csl_file = csl_file
+#' )
+#' cat(typst_output)
+#'
+#' # --- 2. Custom Grouping and Order ---
+#' # Define custom labels and a specific display order
+#' custom_labels <- c(
+#'   article = "Peer-Reviewed Journal Articles",
+#'   inproceedings = "Conference Presentations"
+#' )
+#' custom_order <- c(
+#'   "Peer-Reviewed Journal Articles",
+#'   "Conference Presentations"
+#' )
+#'
+#' typst_output_custom <- create_publication_list(
+#'   bib_file = bib_file,
+#'   author_name = "Jane Doe",
+#'   csl_file = csl_file,
+#'   group_labels = custom_labels,
+#'   group_order = custom_order,
+#'   author_highlight_markup = "#emph[%s]" # Italicize the author
+#' )
+#' cat(typst_output_custom)
+#'
+#' # --- 3. Clean up the temporary files ---
+#' unlink(bib_file)
+#' unlink(csl_file)
+#'
+#' } else {
+#'   cat("Pandoc is not available, skipping example.\n")
+#' }
 create_publication_list <- function(
     bib_file,
     author_name,
@@ -78,20 +169,20 @@ create_publication_list <- function(
   references <- purrr::pluck(parsed_data, "meta", "references", "c")
   blocks <- purrr::pluck(parsed_data, "blocks", 1) # Note the change here
 
-  if (is.null(references) || is.null(blocks) || length(references) == 0) {
-    cli::cli_warn("Pandoc JSON is missing data or contains no references.")
+  if (is.null(references)) {
+    cli::cli_warn("Pandoc JSON appears to be missing reference metadata (`meta$references`).")
+    return(empty_result_string)
+  }
+  if (is.null(blocks)) {
+    cli::cli_warn("Pandoc JSON appears to be missing formatted content (`blocks`).")
+    return(empty_result_string)
+  }
+  if (length(references) == 0) {
+    cli::cli_warn("The bibliography file appears to be empty; no references found.")
     return(empty_result_string)
   }
 
-  metadata_df <- purrr::map_dfr(references, function(x) {
-    tibble::tibble(
-      key = purrr::pluck(x, "c", "id", "c", 1, .default = NA_character_),
-      bibtype = purrr::pluck(x, "c", "type", "c", 1, .default = "misc"),
-      year = purrr::pluck(x, "c", "issued", "c", 1, .default = NA_character_) %>%
-        stringr::str_extract("\\d{4}") %>%
-        as.integer()
-    )
-  }) %>%
+  metadata_df <- purrr::map_dfr(references, .parse_single_reference) %>%
     dplyr::mutate(
       bibtype = dplyr::recode(
         .data$bibtype,
@@ -121,13 +212,16 @@ create_publication_list <- function(
 
   # --- Phase 4: Sort Data ---
   if (!is.null(group_order)) {
-    all_labels <- unique(publication_data$label)
-    ordered_labels <- intersect(group_order, all_labels)
-    other_labels <- sort(setdiff(all_labels, ordered_labels))
-    final_levels <- c(ordered_labels, other_labels)
+    final_levels <- publication_data$label %>%
+      unique() %>%
+      setdiff(group_order) %>%
+      sort() %>%
+      c(intersect(group_order, unique(publication_data$label)), .)
+
     publication_data <- publication_data %>%
       dplyr::mutate(label = factor(.data$label, levels = final_levels))
   }
+
   publication_data <- publication_data %>%
     dplyr::arrange(.data$label, dplyr::desc(.data$year)) %>%
     dplyr::mutate(label = as.character(.data$label)) # Convert back to character

@@ -126,9 +126,8 @@ test_that("load_cv_sheets passes ... arguments down to read_cv_sheet", {
 # --- Test Block 4: Error in validation ---
 test_that("load_cv_sheets stops if validation fails", {
   invalid_sheets_config <- list("ValidSheet" = 123)
-
   expect_error(
     load_cv_sheets(doc_identifier = "any_id", sheets_to_load = invalid_sheets_config),
-    regexp = "Must be of type 'character', not 'double'"
+    regexp = "Assertion on 'sheets_to_load' failed"
   )
 })

@@ -180,10 +180,10 @@ test_that("create_publication_list errors with invalid group_labels format", {
       bib_file = bib_file,
       author_name = "Any Author",
       csl_file = csl_file,
-      group_labels = list(article = 123) # Wert ist keine Zeichenkette
+      group_labels = c(article = 123) # Wert ist keine Zeichenkette
     ),
     # Korrigiertes regexp: Passt auf den allgemeineren Teil der Meldung
-    regexp = "Assertion on 'group_labels' failed: One of the following must apply"
+    regexp = "Assertion on 'group_labels' failed: Must be of type 'character', not 'double'."
   )
 })
 

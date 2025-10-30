@@ -67,3 +67,18 @@
     tibble::tibble(key = key, formatted_string = formatted_string)
   })
 }
+
+#' Parse a single reference from Pandoc's JSON metadata
+#'
+#' @param ref A single reference list object.
+#' @return A one-row tibble with `key`, `bibtype`, and `year`.
+#' @noRd
+.parse_single_reference <- function(ref) {
+  tibble::tibble(
+    key = purrr::pluck(ref, "c", "id", "c", 1, .default = NA_character_),
+    bibtype = purrr::pluck(ref, "c", "type", "c", 1, .default = "misc"),
+    year = purrr::pluck(ref, "c", "issued", "c", 1, .default = NA_character_) %>%
+      stringr::str_extract("\\d{4}") %>%
+      as.integer()
+  )
+}

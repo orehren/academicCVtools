@@ -2,7 +2,7 @@
 % Please edit documentation in R/create_publication_list.R
 \name{create_publication_list}
 \alias{create_publication_list}
-\title{Create a formatted publication list for Typst from a .bib file}
+\title{Create a Formatted Publication List for Typst}
 \usage{
 create_publication_list(
   bib_file,
@@ -20,28 +20,35 @@ create_publication_list(
 )
 }
 \arguments{
-\item{bib_file}{Path to the \code{.bib} bibliography file.}
+\item{bib_file}{Path to your \code{.bib} bibliography file.}
 
-\item{author_name}{The full name of the author to highlight in publications.}
+\item{author_name}{Your full name, exactly as you want it highlighted in the
+publication list.}
 
-\item{csl_file}{Path to the \code{.csl} citation style file for formatting.}
+\item{csl_file}{Path to a \code{.csl} citation style file for formatting your
+references.}
 
-\item{group_labels}{A named character vector to map BibTeX entry types
-(e.g., \code{article}) to user-friendly display labels (e.g., \code{"Journal Article"}).}
+\item{group_labels}{A named vector that maps the BibTeX entry types (like
+\code{"article"} or \code{"inproceedings"}) to the friendly group titles you want in
+your CV (like \code{"Journal Articles"} or \code{"Conference Papers"}).}
 
-\item{default_label}{The display label for any entry types not found in
-\code{group_labels}.}
+\item{default_label}{The label to use for any publication type not listed in
+\code{group_labels}. Defaults to \code{"Other"}.}
 
-\item{group_order}{An optional character vector specifying the desired
-display order of the \code{group_labels}.}
+\item{group_order}{A vector of the group titles from \code{group_labels} in the
+exact order you want them to appear in your CV. Any groups not listed here
+will be added at the end, sorted alphabetically.}
 
-\item{pandoc_path}{An optional path to the Pandoc executable.}
+\item{pandoc_path}{Optional: The full path to the Pandoc executable. If \code{NULL}
+(the default), the function will automatically look for Pandoc in your
+system's PATH.}
 
-\item{author_highlight_markup}{The Typst markup to apply for highlighting the
-author.}
+\item{author_highlight_markup}{The Typst code used to highlight your name.
+Use \verb{\%s} as a placeholder for the \code{author_name}. Defaults to \code{"#strong[\%s]"}
+(bold).}
 
-\item{typst_func_name}{The name of the Typst function that will receive the
-publication data.}
+\item{typst_func_name}{The name of the Typst function that will display your
+publication list. Defaults to \code{"publication-list"}.}
 }
 \value{
 A single character string containing a Typst code block (\verb{```\{=typst\} ... ```}).
@@ -49,20 +56,104 @@ If no valid publication entries are found, it returns an empty Typst array block
 This output is intended to be used in a Quarto document with \code{output: asis}.
 }
 \description{
-This function provides a comprehensive workflow for generating a publication
-list suitable for an academic CV in Typst. It reads a bibliography file,
-processes it using Pandoc and a CSL stylesheet, and then groups, sorts, and
-formats the entries into a Typst-ready code block.
+Converts a \code{.bib} file into a Typst-ready string, perfect for an academic CV.
 }
 \details{
-The process follows these key steps:
+This function automates the process of creating a clean, grouped, and sorted
+publication list for use in Typst and Quarto documents. It's designed for
+academics who want a reproducible, data-driven CV.
+
+Here's how it works:
 \enumerate{
-\item \strong{Argument Validation:} Ensures all inputs are correct and files exist.
-\item \strong{Pandoc Execution:} Calls Pandoc with \code{citeproc} to convert the \code{.bib}
-file into a structured JSON output.
-\item \strong{JSON Parsing & Transformation:} Parses the JSON and transforms it into a
-clean data frame. This includes handling empty/invalid inputs, extracting
-metadata, formatting citation strings, grouping, and author highlighting.
-\item \strong{Typst Output Generation:} Generates the final Typst code block.
+\item \strong{Reads Your Bibliography:} Takes your \code{.bib} file as input.
+\item \strong{Formats with Pandoc:} Uses Pandoc and a CSL style file to format your
+citations into a structured format (JSON).
+\item \strong{Processes and Transforms:} Cleans up the data, groups your publications
+(e.g., "Journal Article", "Book Chapter"), highlights your name, and
+sorts everything by group and year.
+\item \strong{Generates Typst Code:} Produces a clean Typst code block that calls a
+Typst function with your publication data, ready to be included in your
+CV.
+}
+}
+\examples{
+# This function requires Pandoc to be installed and available in the system's PATH.
+# We will only run the example if Pandoc is found.
+if (academicCVtools:::.is_pandoc_available()) {
+
+# --- 1. Basic Example ---
+# Create dummy files for a reproducible example
+bib_content <- c(
+  "@article{Doe2023,
+    author  = {Jane Doe and John Smith},
+    title   = {A Brilliant Paper on R},
+    journal = {Journal of R Studies},
+    year    = {2023}
+  }",
+  "@inproceedings{Doe2022,
+    author  = {Jane Doe},
+    title   = {A Talk on Tidyverse},
+    booktitle = {Proceedings of the R Conference},
+    year    = {2022}
+  }"
+)
+bib_file <- tempfile(fileext = ".bib")
+writeLines(bib_content, bib_file)
+
+csl_content <- '<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
+  <info>
+    <title>Simple APA-like Style</title>
+    <id>simple-apa</id>
+  </info>
+  <bibliography>
+    <layout>
+      <text variable="author" suffix=". "/>
+      <text variable="title" text-case="title" suffix=". "/>
+      <text variable="container-title" font-style="italic" suffix=", "/>
+      <text variable="volume"/>
+      <text variable="page" prefix="(" suffix=")"/>
+      <text variable="issued" prefix=" (" suffix=")."/>
+    </layout>
+  </bibliography>
+</style>'
+csl_file <- tempfile(fileext = ".csl")
+writeLines(csl_content, csl_file)
+
+# Generate the Typst output, highlighting "Jane Doe"
+typst_output <- create_publication_list(
+  bib_file = bib_file,
+  author_name = "Jane Doe",
+  csl_file = csl_file
+)
+cat(typst_output)
+
+# --- 2. Custom Grouping and Order ---
+# Define custom labels and a specific display order
+custom_labels <- c(
+  article = "Peer-Reviewed Journal Articles",
+  inproceedings = "Conference Presentations"
+)
+custom_order <- c(
+  "Peer-Reviewed Journal Articles",
+  "Conference Presentations"
+)
+
+typst_output_custom <- create_publication_list(
+  bib_file = bib_file,
+  author_name = "Jane Doe",
+  csl_file = csl_file,
+  group_labels = custom_labels,
+  group_order = custom_order,
+  author_highlight_markup = "#emph[\%s]" # Italicize the author
+)
+cat(typst_output_custom)
+
+# --- 3. Clean up the temporary files ---
+unlink(bib_file)
+unlink(csl_file)
+
+} else {
+  cat("Pandoc is not available, skipping example.\n")
 }
 }
