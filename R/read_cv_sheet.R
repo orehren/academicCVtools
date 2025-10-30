@@ -169,10 +169,7 @@ read_cv_sheet <- function(doc_identifier,
   # Phase 1: Resolve Identifier (Aborts on failure)
   ss_input <- .resolve_doc_identifier(doc_identifier)
 
-  # Phase 2: Check Sheet Existence (Aborts if sheet definitely not found)
-  .check_sheet_existence(ss_input, sheet_name)
-
-  # Phase 3: Read Data (Aborts on failure from googlesheets4)
+  # Phase 2: Read Data (Aborts on failure from googlesheets4)
   sheet_data <- .read_sheet_data(
     ss_input, sheet_name, na_strings, col_types, trim_ws
   )

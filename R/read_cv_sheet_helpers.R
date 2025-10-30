@@ -127,28 +127,6 @@
 #' @importFrom googlesheets4 read_sheet
 #' @importFrom googledrive as_id
 #' @importFrom cli cli_abort
-.check_sheet_existence <- function(ss_input, sheet_name) {
-  ss_metadata <- tryCatch(
-    googlesheets4::gs4_get(ss_input, .quiet = TRUE),
-    error = function(e) NULL
-  )
-
-  if (is.null(ss_metadata)) {
-    cli::cli_inform("Could not retrieve metadata for document. Proceeding to read attempt.")
-    return(invisible(TRUE))
-  }
-
-  if (!sheet_name %in% ss_metadata$sheets$name) {
-    cli::cli_abort(
-      c("Sheet named {.val {sheet_name}} not found in document.",
-        "i" = "Available sheets: {.val {ss_metadata$sheets$name}}."
-      )
-    )
-  }
-
-  invisible(TRUE)
-}
-
 .read_sheet_data <- function(ss_input, sheet_name, na_strings, col_types, trim_ws) {
   # Let googlesheets4 handle errors directly for better user feedback.
   googlesheets4::read_sheet(

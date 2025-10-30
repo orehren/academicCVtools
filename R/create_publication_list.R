@@ -121,11 +121,16 @@ create_publication_list <- function(
 
   # --- Phase 4: Sort Data ---
   if (!is.null(group_order)) {
+    all_labels <- unique(publication_data$label)
+    ordered_labels <- intersect(group_order, all_labels)
+    other_labels <- sort(setdiff(all_labels, ordered_labels))
+    final_levels <- c(ordered_labels, other_labels)
     publication_data <- publication_data %>%
-      dplyr::mutate(label = factor(.data$label, levels = intersect(group_order, unique(.data$label))))
+      dplyr::mutate(label = factor(.data$label, levels = final_levels))
   }
   publication_data <- publication_data %>%
-    dplyr::arrange(.data$label, dplyr::desc(.data$year))
+    dplyr::arrange(.data$label, dplyr::desc(.data$year)) %>%
+    dplyr::mutate(label = as.character(.data$label)) # Convert back to character
 
   # --- Phase 5: Generate Typst Output ---
   .create_typst_output_block(publication_data, typst_func_name)

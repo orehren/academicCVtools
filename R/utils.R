@@ -13,6 +13,45 @@
   text
 }
 
+#' Find and validate an executable's path
+#'
+#' Checks for an executable in the system's PATH or at a user-specified path.
+#' Throws a clear error if the executable cannot be found or is not executable.
+#'
+#' @param exec_name The name of the executable (e.g., "pandoc").
+#' @param user_path An optional, user-provided path to the executable.
+#' @param arg_name The name of the user-facing argument for the path (for errors).
+#'
+#' @return The validated, absolute path to the executable.
+#' @importFrom cli cli_abort
+#' @noRd
+.validate_executable_found <- function(exec_name, user_path = NULL, arg_name = "path") {
+  # If a user path is provided, check it first.
+  if (!is.null(user_path)) {
+    if (file.exists(user_path) && !dir.exists(user_path)) {
+      # TODO: Check for execute permissions on non-Windows systems.
+      return(normalizePath(user_path))
+    } else {
+      cli::cli_abort(
+        "Executable not found at the path provided in {.arg {arg_name}}: {.path {user_path}}."
+      )
+    }
+  }
+
+  # If no user path, search the system PATH.
+  system_path <- Sys.which(exec_name)
+  if (system_path != "") {
+    return(system_path)
+  }
+
+  # If not found anywhere, abort.
+  cli::cli_abort(
+    c("Could not find the {.val {exec_name}} executable.",
+      "i" = "Please install {.val {exec_name}} or provide its path via the {.arg {arg_name}} argument."
+    )
+  )
+}
+
 #' Evaluate a tidyselect expression within a data context safely
 #'
 #' This helper function captures a tidyselect expression (as a quosure)
