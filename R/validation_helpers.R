@@ -89,8 +89,10 @@
   # Validate sheets_to_load
   if (is.character(sheets_to_load)) {
     checkmate::assert_character(sheets_to_load, min.chars = 1, min.len = 1)
-  } else {
+  } else if (rlang::is_named(sheets_to_load)) {
     checkmate::assert_list(sheets_to_load, types = "character", names = "unique")
+  } else {
+    checkmate::assert_list(sheets_to_load, types = "character")
   }
 }
 
@@ -106,4 +108,43 @@
     checkmate::assert_atomic(col_types)
   }
   checkmate::assert_logical(trim_ws, len = 1, any.missing = FALSE)
+}
+
+#' Find and validate an executable, returning its path
+#'
+#' @param exec_name The name of the executable (e.g., "pandoc").
+#' @param path_arg An optional user-provided path to the executable.
+#' @param arg_name The name of the argument providing `path_arg` (for error messages).
+#'
+#' @return The validated, absolute path to the executable.
+#' @importFrom cli cli_abort
+#' @importFrom checkmate assert_string test_file_exists
+#' @noRd
+#' @export
+.validate_executable_found <- function(exec_name, path_arg = NULL, arg_name = "path_arg") {
+  if (!is.null(path_arg)) {
+    if (!checkmate::test_file_exists(path_arg)) {
+      cli::cli_abort(
+        c(
+          "x" = "Executable not found at the path you provided.",
+          " " = "Argument: {.arg {arg_name}}",
+          " " = "Path: {.path {path_arg}}"
+        ),
+        call = NULL
+      )
+    }
+    return(path_arg)
+  }
+
+  exec_path <- Sys.which(exec_name)
+  if (exec_path == "") {
+    cli::cli_abort(
+      c(
+        "x" = "{.val {exec_name}} executable not found in your system's PATH.",
+        "i" = "Please install {exec_name} or provide a direct path via the {.arg {arg_name}} argument."
+      ),
+      call = NULL
+    )
+  }
+  exec_path
 }

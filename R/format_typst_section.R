@@ -19,7 +19,7 @@
 #'
 #' @return A single character string containing Typst code.
 #'
-#' @importFrom dplyr select mutate across all_of relocate row_number %>%
+#' @importFrom dplyr select mutate across all_of relocate row_number
 #' @importFrom tidyr unite pivot_longer
 #' @importFrom rlang enquo arg_match sym
 #' @importFrom tidyselect everything
@@ -57,8 +57,8 @@ format_typst_section <- function(data,
   data_proc <- data
 
   if (length(combine_col_names) > 0) {
-    data_proc <- data_proc %>%
-      dplyr::mutate(dplyr::across(dplyr::all_of(combine_col_names), ~ifelse(is.na(.), NA, paste0(combine_prefix, .)))) %>%
+    data_proc <- data_proc |>
+      dplyr::mutate(dplyr::across(dplyr::all_of(combine_col_names), ~ifelse(is.na(.), NA, paste0(combine_prefix, .)))) |>
       tidyr::unite(
         col = !!rlang::sym(combine_as),
         dplyr::all_of(combine_col_names),
@@ -73,14 +73,14 @@ format_typst_section <- function(data,
   }
 
   # --- Phase 3: Vectorized String Generation ---
-  typst_dictionaries <- data_proc %>%
-    dplyr::mutate(.row_id = dplyr::row_number()) %>%
+  typst_dictionaries <- data_proc |>
+    dplyr::mutate(.row_id = dplyr::row_number()) |>
     tidyr::pivot_longer(
       cols = -".row_id",
       names_to = "key",
       values_to = "value",
       values_transform = as.character
-    ) %>%
+    ) |>
     dplyr::mutate(
       value_type = ifelse(is.na(.data$value), na_action, "string"),
       value = dplyr::case_when(
@@ -89,14 +89,14 @@ format_typst_section <- function(data,
         .data$value_type == "string" & is.na(.data$value) ~ '"NA"',
         .data$value_type == "string" ~ paste0('"', .escape_typst_string(.data$value), '"')
       )
-    ) %>%
-    dplyr::filter(!is.na(.data$value)) %>%
-    dplyr::group_by(.data$.row_id) %>%
+    ) |>
+    dplyr::filter(!is.na(.data$value)) |>
+    dplyr::group_by(.data$.row_id) |>
     dplyr::summarise(
       dict_str = paste0(
         "(", paste(.data$key, .data$value, sep = ": ", collapse = ", "), ")"
       )
-    ) %>%
+    ) |>
     dplyr::pull(.data$dict_str)
 
   # --- Phase 4: Final Output Assembly ---

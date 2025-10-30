@@ -50,7 +50,7 @@
   if (is.null(entry_divs)) return(tibble::tibble(key = character(), formatted_string = character()))
 
   purrr::map_dfr(entry_divs, ~{
-    key <- purrr::pluck(.x, "c", 1, 1, .default = "") %>%
+    key <- purrr::pluck(.x, "c", 1, 1, .default = "") |>
       stringr::str_remove("^ref-")
 
     content_parts <- purrr::map_chr(purrr::pluck(.x, "c", 2), function(para_node) {
@@ -77,8 +77,8 @@
   tibble::tibble(
     key = purrr::pluck(ref, "c", "id", "c", 1, .default = NA_character_),
     bibtype = purrr::pluck(ref, "c", "type", "c", 1, .default = "misc"),
-    year = purrr::pluck(ref, "c", "issued", "c", 1, .default = NA_character_) %>%
-      stringr::str_extract("\\d{4}") %>%
+    year = purrr::pluck(ref, "c", "issued", "c", 1, .default = NA_character_) |>
+      stringr::str_extract("\\d{4}") |>
       as.integer()
   )
 }

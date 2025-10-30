@@ -167,7 +167,7 @@ create_publication_list <- function(
   )
 
   references <- purrr::pluck(parsed_data, "meta", "references", "c")
-  blocks <- purrr::pluck(parsed_data, "blocks", 1) # Note the change here
+  blocks <- purrr::pluck(parsed_data, "blocks", 1)
 
   if (is.null(references)) {
     cli::cli_warn("Pandoc JSON appears to be missing reference metadata (`meta$references`).")
@@ -182,7 +182,7 @@ create_publication_list <- function(
     return(empty_result_string)
   }
 
-  metadata_df <- purrr::map_dfr(references, .parse_single_reference) %>%
+  metadata_df <- purrr::map_dfr(references, .parse_single_reference) |>
     dplyr::mutate(
       bibtype = dplyr::recode(
         .data$bibtype,
@@ -198,9 +198,9 @@ create_publication_list <- function(
 
   formatted_strings_df <- .extract_formatted_strings_from_ast(blocks)
 
-  publication_data <- metadata_df %>%
-    dplyr::left_join(formatted_strings_df, by = "key") %>%
-    dplyr::filter(!is.na(.data$formatted_string), nzchar(.data$formatted_string)) %>%
+  publication_data <- metadata_df |>
+    dplyr::left_join(formatted_strings_df, by = "key") |>
+    dplyr::filter(!is.na(.data$formatted_string), nzchar(.data$formatted_string)) |>
     dplyr::mutate(
       label = dplyr::recode(.data$bibtype, !!!group_labels, .default = default_label),
       formatted_string = stringr::str_replace_all(
@@ -212,19 +212,18 @@ create_publication_list <- function(
 
   # --- Phase 4: Sort Data ---
   if (!is.null(group_order)) {
-    final_levels <- publication_data$label %>%
-      unique() %>%
-      setdiff(group_order) %>%
-      sort() %>%
-      c(intersect(group_order, unique(publication_data$label)), .)
+    present_labels <- unique(publication_data$label)
+    ordered_labels <- intersect(group_order, present_labels)
+    remaining_labels <- setdiff(present_labels, group_order) |> sort()
+    final_levels <- c(ordered_labels, remaining_labels)
 
-    publication_data <- publication_data %>%
+    publication_data <- publication_data |>
       dplyr::mutate(label = factor(.data$label, levels = final_levels))
   }
 
-  publication_data <- publication_data %>%
-    dplyr::arrange(.data$label, dplyr::desc(.data$year)) %>%
-    dplyr::mutate(label = as.character(.data$label)) # Convert back to character
+  publication_data <- publication_data |>
+    dplyr::arrange(.data$label, dplyr::desc(.data$year)) |>
+    dplyr::mutate(label = as.character(.data$label))
 
   # --- Phase 5: Generate Typst Output ---
   .create_typst_output_block(publication_data, typst_func_name)
@@ -243,7 +242,7 @@ create_publication_list <- function(
 
   typst_entry_strings <- purrr::map_chr(1:nrow(combined_data_sorted), ~ {
     current_entry <- combined_data_sorted[.x, ]
-    escaped_label <- .escape_typst_string(as.character(current_entry$label)) # Ensure character
+    escaped_label <- current_entry$label |> as.character() |> .escape_typst_string()
     item_for_r_string <- gsub("\\", "\\\\", current_entry$formatted_string, fixed = TRUE)
     item_for_r_string <- gsub('"', '\\"', item_for_r_string, fixed = TRUE)
     sprintf('  (label: "%s", item: "%s")', escaped_label, item_for_r_string)

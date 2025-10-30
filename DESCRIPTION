@@ -31,7 +31,6 @@ Imports:
     tidyr,
     tibble,
     jsonlite,
-    magrittr,
     tidyselect,
     checkmate
 Suggests:
