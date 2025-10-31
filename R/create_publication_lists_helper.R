@@ -51,6 +51,8 @@
 #'
 #' @param inline_nodes A list of inline nodes from a "Para" block.
 #' @return A single character string concatenating the text content.
+#' @importFrom purrr map_chr pluck
+#' @importFrom stringr str_c
 #' @noRd
 .parse_ast_inline_nodes <- function(inline_nodes) {
   purrr::map_chr(inline_nodes, function(node) {
@@ -69,6 +71,9 @@
 #'
 #' @param entry_div A single 'div' list from the main list of entries.
 #' @return A one-row tibble with `key` and `formatted_string`.
+#' @importFrom purrr pluck map_chr
+#' @importFrom stringr str_remove str_c
+#' @importFrom tibble tibble
 #' @noRd
 .parse_ast_entry_div <- function(entry_div) {
   # Path to citation key: div > "c" > attributes > id
@@ -116,6 +121,9 @@
 #'
 #' @param ref A single reference list object.
 #' @return A one-row tibble with `key`, `bibtype`, and `year`.
+#' @importFrom purrr pluck
+#' @importFrom tibble tibble
+#' @importFrom stringr str_extract
 #' @noRd
 .parse_single_reference <- function(ref) {
   tibble::tibble(

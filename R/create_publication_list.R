@@ -46,6 +46,11 @@
 #'   If no valid publication entries are found, it returns an empty Typst array block.
 #'   This output is intended to be used in a Quarto document with `output: asis`.
 #'
+#' @importFrom dplyr filter mutate recode left_join desc arrange
+#' @importFrom purrr pluck map_dfr
+#' @importFrom stringr str_replace_all
+#' @importFrom jsonlite fromJSON
+#'
 #' @export
 #'
 #' @examples

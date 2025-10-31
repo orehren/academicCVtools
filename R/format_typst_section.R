@@ -1,5 +1,29 @@
 # R/format_typst_section.R
 
+#' Format a single value for Typst based on NA handling rules
+#'
+#' This helper encapsulates the logic for handling NA values and escaping
+#' special characters for Typst strings.
+#'
+#' @param values A vector of values to format.
+#' @param na_action The NA handling strategy: "omit", "keep", or "string".
+#'
+#' @return A character vector of formatted values. `NA` is used to mark
+#'   values that should be filtered out in a later step.
+#' @importFrom dplyr case_when
+#' @noRd
+.format_typst_value <- function(values, na_action) {
+  # The `case_when` is vectorized and handles the logic for each value.
+  dplyr::case_when(
+    is.na(values) & na_action == "omit"   ~ NA_character_,
+    is.na(values) & na_action == "keep"   ~ "none",
+    is.na(values) & na_action == "string" ~ '"NA"',
+    !is.na(values)                        ~ paste0('"', .escape_typst_string(as.character(values)), '"'),
+    # This default case should ideally not be reached with the logic above.
+    TRUE                                  ~ NA_character_
+  )
+}
+
 #' Format CV section data into a Typst string
 #'
 #' Takes a data frame (tibble) representing a CV section and formats it into
@@ -73,6 +97,11 @@ format_typst_section <- function(data,
   }
 
   # --- Phase 3: Vectorized String Generation ---
+  # This pipeline transforms the data frame into a vector of Typst dictionaries.
+  # 1. Pivot data longer to get key-value pairs for each original row.
+  # 2. Format the 'value' column into a Typst-safe string using the helper.
+  # 3. Filter out any key-value pairs that should be omitted (where value is now NA).
+  # 4. Group by the original row ID and summarize to build the dictionary string.
   typst_dictionaries <- data_proc |>
     dplyr::mutate(.row_id = dplyr::row_number()) |>
     tidyr::pivot_longer(
@@ -81,23 +110,21 @@ format_typst_section <- function(data,
       values_to = "value",
       values_transform = as.character
     ) |>
+    # Use the helper to handle NA values and string escaping
     dplyr::mutate(
-      value_type = ifelse(is.na(.data$value), na_action, "string"),
-      value = dplyr::case_when(
-        .data$value_type == "omit" ~ NA_character_,
-        .data$value_type == "keep" ~ "none",
-        .data$value_type == "string" & is.na(.data$value) ~ '"NA"',
-        .data$value_type == "string" ~ paste0('"', .escape_typst_string(.data$value), '"')
-      )
+      formatted_value = .format_typst_value(.data$value, na_action = na_action)
     ) |>
-    dplyr::filter(!is.na(.data$value)) |>
+    # Omit values that the helper marked as NA
+    dplyr::filter(!is.na(.data$formatted_value)) |>
     dplyr::group_by(.data$.row_id) |>
     dplyr::summarise(
+      # Create the dictionary string: (key1: "value1", key2: "value2")
       dict_str = paste0(
-        "(", paste(.data$key, .data$value, sep = ": ", collapse = ", "), ")"
+        "(", paste(.data$key, .data$formatted_value, sep = ": ", collapse = ", "), ")"
       )
     ) |>
     dplyr::pull(.data$dict_str)
+
 
   # --- Phase 4: Final Output Assembly ---
   if (length(typst_dictionaries) == 0) {

@@ -1,12 +1,5 @@
 # R/validation_helpers.R
 
-#' Helper function to check for Pandoc availability
-#' @return `TRUE` if Pandoc is found, otherwise `FALSE`.
-#' @noRd
-.is_pandoc_available <- function() {
-  Sys.which("pandoc") != ""
-}
-
 #' Validate arguments for create_publication_list
 #'
 #' @param bib_file Path to the .bib file.
