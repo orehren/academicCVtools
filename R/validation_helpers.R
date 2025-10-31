@@ -3,7 +3,6 @@
 #' Helper function to check for Pandoc availability
 #' @return `TRUE` if Pandoc is found, otherwise `FALSE`.
 #' @noRd
-#' @export
 .is_pandoc_available <- function() {
   Sys.which("pandoc") != ""
 }
@@ -23,7 +22,6 @@
 #' @return `TRUE` (invisibly) if all checks pass.
 #' @importFrom checkmate assert_file_exists assert_string assert_character assert_named
 #' @noRd
-#' @export
 .validate_create_publication_list_args <- function(
     bib_file, author_name, csl_file, group_labels, default_label,
     group_order, pandoc_path, author_highlight_markup, typst_func_name) {
@@ -65,7 +63,6 @@
 #' @importFrom checkmate assert_data_frame assert_string assert_character assert_choice
 #' @importFrom rlang quo_is_null
 #' @noRd
-#' @export
 .validate_format_typst_section_args <- function(
     data, typst_func, combine_cols, combine_as, combine_sep,
     combine_prefix, exclude_cols, na_action, output_mode) {
@@ -81,7 +78,6 @@
 
 #' Validate arguments for load_cv_sheets
 #' @noRd
-#' @export
 .validate_load_cv_sheets_args <- function(doc_identifier, sheets_to_load, ...) {
   # Validate doc_identifier
   checkmate::assert_string(doc_identifier, min.chars = 1)
@@ -98,7 +94,6 @@
 
 #' Validate arguments for read_cv_sheet
 #' @noRd
-#' @export
 .validate_read_cv_sheet_args <- function(
     doc_identifier, sheet_name, na_strings, col_types, trim_ws) {
   checkmate::assert_string(doc_identifier, min.chars = 1)
@@ -120,7 +115,6 @@
 #' @importFrom cli cli_abort
 #' @importFrom checkmate assert_string test_file_exists
 #' @noRd
-#' @export
 .validate_executable_found <- function(exec_name, path_arg = NULL, arg_name = "path_arg") {
   if (!is.null(path_arg)) {
     if (!checkmate::test_file_exists(path_arg)) {
